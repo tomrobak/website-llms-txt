@@ -38,43 +38,8 @@ class LLMS_Core {
 
         add_action('wp_head', array($this, 'wp_head'));
 
-        add_action('all_admin_notices', array($this, 'all_admin_notices'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_notice_script'));
-        add_action('wp_ajax_dismiss_llms_admin_notice', array($this, 'dismiss_llms_admin_notice'));
     }
 
-    public function all_admin_notices() {
-        if (get_user_meta(get_current_user_id(), 'llms_notice_dismissed', true)) {
-            return;
-        }
-        ?>
-        <div class="notice updated is-dismissible llms-admin-notice">
-            <p><?php _e('WP LLMs.txt - Want new features? Suggest and vote to shape our plugin development roadmap.', 'wp-llms-txt'); ?>
-                <a href="https://x.com/ryhowww/status/1909712881387462772" target="_blank">Twitter</a> |
-                <a href="https://wordpress.org/support/?post_type=topic&p=18406423">WP Forums</a>
-            </p>
-        </div>
-        <?php
-    }
-
-    public function enqueue_notice_script() {
-        wp_enqueue_script('llms-notice-script', LLMS_PLUGIN_URL . 'admin/notice-dismiss.js', array('jquery'), LLMS_VERSION, true);
-        wp_localize_script('llms-notice-script', 'llmsNoticeAjax', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce'    => wp_create_nonce('llms_dismiss_notice')
-        ));
-    }
-
-    public function dismiss_llms_admin_notice() {
-        // Security check: ensure user has proper capabilities
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Insufficient permissions');
-        }
-        
-        check_ajax_referer('llms_dismiss_notice', 'nonce');
-        update_user_meta(get_current_user_id(), 'llms_notice_dismissed', 1);
-        wp_send_json_success();
-    }
 
     public function wp_head() {
         echo '<link rel="llms-sitemap" href="' . esc_url( home_url( '/llms.txt' ) ) . '" />' . "\n";

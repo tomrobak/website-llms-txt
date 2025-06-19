@@ -1,0 +1,127 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.0'
+        tools: composer
+        
+    - name: Get tag version
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Update plugin version
+      run: |
+        # Update version in main plugin file
+        sed -i "s/Version: .*/Version: ${{ steps.get_version.outputs.VERSION }}/" website-llms-txt.php
+        sed -i "s/define('LLMS_VERSION', '.*');/define('LLMS_VERSION', '${{ steps.get_version.outputs.VERSION }}');/" website-llms-txt.php
+        
+        # Update version in readme
+        sed -i "s/Stable tag: .*/Stable tag: ${{ steps.get_version.outputs.VERSION }}/" readme.txt
+        
+    - name: Create plugin zip
+      run: |
+        # Create release directory
+        mkdir -p release
+        
+        # Copy plugin files (exclude development files)
+        rsync -av --exclude='.git' \
+                  --exclude='.github' \
+                  --exclude='node_modules' \
+                  --exclude='.gitignore' \
+                  --exclude='release' \
+                  --exclude='README.md' \
+                  --exclude='.DS_Store' \
+                  --exclude='*.log' \
+                  . release/wp-llms-txt/
+        
+        # Create zip file
+        cd release
+        zip -r wp-llms-txt-${{ steps.get_version.outputs.VERSION }}.zip wp-llms-txt/
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Extract changelog for this version from CHANGELOG.md if it exists
+        if [ -f "CHANGELOG.md" ]; then
+          # Get changelog between this version and previous
+          CHANGELOG=$(awk '/^## \[${{ steps.get_version.outputs.VERSION }}\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md || echo "")
+        else
+          CHANGELOG="Release version ${{ steps.get_version.outputs.VERSION }}"
+        fi
+        
+        # Save to output for later use
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.get_version.outputs.VERSION }}
+        name: "WP LLMs.txt v${{ steps.get_version.outputs.VERSION }}"
+        body: |
+          ## 🚀 What's New in v${{ steps.get_version.outputs.VERSION }}
+          
+          ${{ steps.changelog.outputs.CHANGELOG }}
+          
+          ## 📥 Installation
+          
+          1. Download `wp-llms-txt-${{ steps.get_version.outputs.VERSION }}.zip`
+          2. Upload to WordPress: Plugins → Add New → Upload Plugin
+          3. Activate and configure in Tools → Llms.txt
+          
+          ## 🔧 Automatic Updates
+          
+          This plugin supports automatic updates from GitHub. Once installed, you'll receive update notifications directly in your WordPress admin.
+          
+          ---
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.previous_version.outputs.VERSION }}...v${{ steps.get_version.outputs.VERSION }}
+        files: |
+          release/wp-llms-txt-${{ steps.get_version.outputs.VERSION }}.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Update update-check.json
+      run: |
+        # Create update check file for WordPress
+        cat > update-check.json << EOF
+        {
+          "version": "${{ steps.get_version.outputs.VERSION }}",
+          "details_url": "https://github.com/${{ github.repository }}/releases/tag/v${{ steps.get_version.outputs.VERSION }}",
+          "download_url": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.get_version.outputs.VERSION }}/wp-llms-txt-${{ steps.get_version.outputs.VERSION }}.zip",
+          "tested": "6.4",
+          "requires_php": "7.2",
+          "requires": "5.0",
+          "sections": {
+            "description": "WP LLMs.txt - Make Your WordPress Site AI-Friendly",
+            "changelog": "${{ steps.changelog.outputs.CHANGELOG }}"
+          }
+        }
+        EOF
+        
+    - name: Deploy update-check.json to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: .
+        destination_dir: .
+        keep_files: true
+        publish_branch: gh-pages
+        commit_message: "Update version info for v${{ steps.get_version.outputs.VERSION }}"
