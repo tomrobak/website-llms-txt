@@ -16,6 +16,16 @@ wp-content/mu-plugins/
 *.sublime-workspace
 .DS_Store
 Thumbs.db
+.cursorrules
+.cursor/
+
+# AI Assistant files
+claude.md
+.claude
+.claude/
+*.claude
+cursor.md
+.cursor-tutor
 
 # Logs
 *.log
@@ -66,9 +76,7 @@ release/
 .env.development.local
 .env.test.local
 .env.production.local
-claude.md
-.claude 
-fix.md
+# These lines are now covered above in AI Assistant files section
 
 # PHPStorm
 .phpstorm.meta.php
