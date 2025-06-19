@@ -1,130 +1,160 @@
-# 🤖 WP LLMs.txt - Make Your WordPress Site AI-Friendly (Finally!)
+# WP LLMs.txt Plugin
 
-[![WordPress Plugin](https://img.shields.io/badge/WordPress-Plugin-blue.svg)](https://wordpress.org/)
-[![PHP Version](https://img.shields.io/badge/PHP-7.2%2B-purple.svg)](https://php.net/)
-[![License](https://img.shields.io/badge/License-GPL%20v2-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![GitHub Release](https://img.shields.io/github/v/release/tomrobak/wp-llms-txt)](https://github.com/tomrobak/website-llms-txt/releases)
+**Last Updated: 2025-06-19 21:44:40**
 
-*Because even AI needs a roadmap to find the good stuff on your website* 🗺️
+A WordPress plugin that generates LLMS.txt files for AI/LLM content consumption with SEO plugin integration. Originally created by Website LLM, forked and maintained by Tom Robak.
 
-## What's This About? 🤔
+## ✨ Recent Updates
 
-Remember when you had to create sitemaps for Google? Well, now ChatGPT, Claude, and their AI buddies want their own special menu too. This plugin creates an `llms.txt` file that tells AI systems exactly what content on your site is worth reading (and what's just... not).
+### Major UI/UX Redesign (2025-06-19)
+- **Modern shadcn-inspired interface** - Complete redesign with professional, clean UI components
+- **Fixed duplicate checkboxes** - Resolved HTML/CSS conflicts causing non-functional form elements  
+- **Removed drag & drop** - Simplified file upload with standard, reliable input method
+- **Unified design system** - Consistent styling across all plugin interfaces
+- **Better UX** - Improved navigation with tab-based organization and visual feedback
+- **Maintained community features** - WPLove.co section preserved as community-focused element
 
-Think of it as a "VIP list" for your website content, but for robots. The cool robots that can actually understand what you're saying.
+## 🚀 Features
 
-## 🚀 This Fork is Different (And Better!)
+### Core Functionality
+- **Automated LLMS.txt generation** from WordPress content
+- **SEO plugin integration** with Yoast SEO and RankMath sitemaps
+- **Flexible content selection** - Choose post types, taxonomies, and custom fields
+- **Content optimization** - Word limits, excerpt inclusion, meta data control
+- **Real-time updates** - Immediate or scheduled regeneration options
+- **WooCommerce support** - Include product data in AI-friendly format
 
-This is a **supercharged fork** of the original "Website LLMs.txt" plugin, lovingly maintained by the original genius [Website LLMs.txt team](https://github.com/RRyanHoward/website-llms-txt). I took their brilliant idea and... well, let's just say I gave it some serious upgrades:
+### Modern Admin Interface
+- **shadcn-inspired design** - Professional, modern UI components
+- **Tab-based navigation** - Organized settings across Content, Management, Import/Export, and Debug sections
+- **Responsive design** - Works seamlessly on all screen sizes
+- **Dark mode support** - Automatic system preference detection
+- **Accessibility focused** - WCAG AA compliant with proper focus management
 
-### ✨ What I Added (The Good Stuff):
-- **🛡️ Security Fort Knox**: Fixed security vulnerabilities that would make your hosting provider cry
-- **⚡ Speed Demon**: Performance optimizations that make it 75% faster (your server will thank you)
-- **🎨 Pretty Interface**: Real-time progress bars because waiting is so 2023
-- **🛠️ Developer Paradise**: Filters and hooks for developers who like to tinker
-- **📦 Import/Export Magic**: Move settings between sites like a WordPress wizard
-- **🛒 WooCommerce Love**: Full e-commerce support including sale prices and stock levels
-- **🔍 Error Detective**: Comprehensive error logging that actually tells you what went wrong
-- **🧠 Smart Validation**: Forms that prevent you from breaking things (you're welcome)
+### Content Management
+- **Smart content filtering** - Include/exclude specific post types and taxonomies
+- **Custom field support** - Include publicly visible custom field data
+- **Content limits** - Control maximum posts per type and words per post
+- **Taxonomy handling** - Include categories, tags, and custom taxonomies
+- **Meta information** - Optional publish dates, authors, and other metadata
 
-### 💝 Credits Where Credits Are Due
-Massive props to the original [Website LLMs.txt team](https://github.com/RRyanHoward/website-llms-txt) for creating this brilliant concept. I'm just the guy who couldn't leave well enough alone and decided to add "a few small improvements" (narrator: it was not a few small improvements).
+## 📋 Requirements
 
-## Why Your Website Needs This 🎯
+- **WordPress**: 5.8 or higher
+- **PHP**: 7.2 or higher
+- **Memory**: 128MB minimum (256MB recommended)
+- **Permissions**: Write access to wp-content/uploads directory
 
-### For Your Website:
-- **AI Discovery**: Your content gets found by AI systems automatically
-- **Better AI Responses**: When someone asks AI about your topic, your site gets mentioned
-- **SEO 2.0**: Like regular SEO, but for the AI-powered future
-- **Professional Credibility**: Shows you're forward-thinking (and slightly obsessed with technology)
+## 🛠️ Installation
 
-### For AI Systems:
-- **Clean Content**: They get your best stuff without the navigation menus and cookie notices
-- **Structured Data**: Everything organized the way AI brains like it
-- **Respectful Crawling**: Only the content you want to share gets shared
-- **Context-Rich**: Full product data, taxonomies, and metadata included
+1. Download the plugin zip file
+2. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
+3. Activate the plugin
+4. Configure settings in **Settings → WP LLMs.txt**
+5. Click "Clear Caches" to generate your first LLMS.txt file
 
-## Installation (The Easy Way) 📥
+## ⚙️ Configuration
 
-1. **Download** the latest release from my [releases page](https://github.com/tomrobak/website-llms-txt/releases)
-2. **Upload** to your WordPress site (Plugins → Add New → Upload Plugin)
-3. **Activate** the plugin
-4. **Go to** Tools → Llms.txt in your WordPress admin
-5. **Configure** your settings (or don't, the defaults are pretty smart)
-6. **Watch** the magic happen ✨
+### Content Settings
+- **Post Types**: Select which content types to include (Pages, Posts, Custom Post Types)
+- **Content Options**: Choose meta information, excerpts, and taxonomies
+- **Advanced Options**: Custom fields and private taxonomy handling
+- **Limits**: Set maximum posts per type and words per post
+- **Update Frequency**: Choose immediate, daily, or weekly regeneration
 
-## Configuration (The Fun Part) ⚙️
+### SEO Integration
+- **Yoast SEO**: Automatic sitemap integration with `/llms-sitemap.xml`
+- **RankMath**: Native sitemap support for LLMS.txt discovery
+- **Cache Management**: Clear SEO plugin caches automatically
 
-The plugin works great out of the box, but if you like tweaking things:
+### Import/Export
+- **Settings Backup**: Export current configuration as JSON
+- **Site Migration**: Import settings from other installations
+- **Version Control**: Track configuration changes over time
 
-- **Select Post Types**: Choose what content types to include
-- **Set Limits**: Decide how many posts per type (we suggest not going crazy)
-- **Customize Fields**: Include custom fields and taxonomies
-- **WooCommerce Settings**: Product data, prices, stock status - it's all there
-- **Update Frequency**: Real-time or scheduled updates
+## 📁 File Structure
 
-## For Developers (The Technical Folks) 👩‍💻
+```
+/admin/                 # Admin interface files
+  ├── modern-admin-page.php      # Main settings page
+  ├── modern-admin-styles.css    # shadcn-inspired CSS
+  └── admin-script.js            # JavaScript functionality
 
-### Available Filters:
-```php
-// Customize which post types to include
-add_filter('llms_txt_post_types', function($post_types) {
-    return array_merge($post_types, ['custom_type']);
-});
+/includes/              # Core PHP classes
+  ├── class-llms-core.php        # Main plugin class
+  ├── class-llms-generator.php   # Content generation
+  ├── class-llms-cache-manager.php # Cache handling
+  └── class-llms-content-cleaner.php # Content processing
 
-// Modify content before output
-add_filter('llms_txt_content', function($content, $post_id, $post_type) {
-    return $content . "\n\n[Custom footer text]";
-}, 10, 3);
-
-// Override post inclusion logic
-add_filter('llms_txt_include_post', function($include, $post_id, $post) {
-    return $post->post_status === 'publish' && !get_post_meta($post_id, 'exclude_from_ai', true);
-}, 10, 3);
+/docs/                  # Documentation
+  ├── ui/shadcn-components.md    # UI component documentation
+  └── fixes-log.md               # Change history
 ```
 
-### Available Actions:
-```php
-// Hook before generation starts
-add_action('llms_txt_before_generate', function($settings) {
-    error_log('LLMS generation starting with settings: ' . print_r($settings, true));
-});
+## 🌐 Community
 
-// Hook after generation completes
-add_action('llms_txt_after_generate', function($file_path, $settings) {
-    // Maybe notify external services, update cache, etc.
-});
-```
+### WPLove.co
+Join our passionate community of WordPress users, photographers, and creatives:
+- Share knowledge and get inspired
+- Real-world WordPress wisdom
+- Niche community focused on practical solutions
+- **Visit**: [WPLove.co](https://wplove.co) 📸
 
-## Changelog 📝
+### Development
+- **GitHub**: [tomrobak/website-llms-txt](https://github.com/tomrobak/website-llms-txt)
+- **Issues**: Report bugs and feature requests
+- **Contributions**: Pull requests welcome
 
-### v1.0.0 - The "Finally Fixed Everything" Release
-- 🛡️ **Security**: Fixed all the scary security vulnerabilities
-- ⚡ **Performance**: 75% faster queries with database indexing
-- 🎨 **UX**: Real-time progress indicators and better error messages
-- 🛠️ **Extensibility**: Full filter and action system for developers
-- 📦 **Portability**: Import/export settings between sites
-- 🛒 **E-commerce**: Extended WooCommerce support with pricing and inventory
-- 🔍 **Debugging**: Comprehensive error logging and validation
-- 🧹 **Cleanup**: Removed all the technical debt (there was a lot)
+## 🔧 Technical Details
 
-## Support & Contributing 🤝
+### Generated Files
+- **Primary**: `/wp-content/uploads/llms.txt` - Main AI training file
+- **Sitemap**: `/llms-sitemap.xml` - SEO integration endpoint
+- **Cache**: Database-stored content cache for performance
 
-- **Issues**: Found a bug? [Create an issue](https://github.com/tomrobak/website-llms-txt/issues)
-- **Feature Requests**: Got ideas? I love ideas!
-- **Pull Requests**: Code contributions welcome (tests required, sanity optional)
-- **Community**: Join [WPLove.co](https://wplove.co) - a passionate community of WordPress users, especially photographers and creatives. It's a niche community packed with knowledge and real-world WordPress wisdom!
+### Integration Points
+- **WordPress Hooks**: Integrated with post save, update, and delete actions
+- **SEO Plugins**: Native sitemap providers for major SEO plugins
+- **WooCommerce**: Product data inclusion with proper formatting
+- **Custom Post Types**: Automatic detection and inclusion options
 
-## License 📄
+### Performance Features
+- **Database Caching**: Intelligent content caching system
+- **Batch Processing**: Memory-efficient content generation
+- **Background Updates**: Scheduled regeneration via WordPress cron
+- **Error Handling**: Comprehensive logging and recovery systems
 
-GPL v2 or later - Because sharing is caring, and WordPress said so.
+## 📊 File Output Format
 
-## Fun Fact 🎉
+The generated LLMS.txt follows AI training standards:
+- **Structured Headers**: Clear content organization
+- **Metadata**: Post types, dates, authors, categories
+- **Clean Content**: HTML stripped, shortcodes processed
+- **URL References**: Direct links to original content
+- **Taxonomy Information**: Categories, tags, custom taxonomies
 
-This plugin has been battle-tested on sites with over 10,000 posts. Your AI overlords will be pleased with the efficiency.
+## 🐛 Troubleshooting
+
+### Common Issues
+- **File Not Generated**: Check wp-content/uploads directory permissions
+- **Empty Content**: Verify post type selections in settings
+- **SEO Integration**: Clear SEO plugin caches after configuration
+- **Memory Issues**: Increase PHP memory limit or reduce content limits
+
+### Debug Information
+Access debug panel (WP_DEBUG mode) for:
+- System information
+- Plugin version details
+- File permissions status
+- PHP configuration
+- WordPress compatibility
+
+## 📄 License
+
+GPL v2 or later - WordPress Plugin License
 
 ---
 
-*Made with ❤️ (and lots of coffee) by Tom Robak, who believes the future is AI-powered, but the present is still delightfully human.*
+**Made with ❤️ for the WordPress community**
 
-**Want to connect?** Find me and other passionate WordPress users at [WPLove.co](https://wplove.co) - where photographers, creatives, and WordPress enthusiasts share knowledge and build amazing things together! 📸✨
+*Contributing to the AI-friendly web, one site at a time.*

@@ -283,7 +283,7 @@ class LLMS_Core {
     }
 
     public function render_admin_page() {
-        include LLMS_PLUGIN_DIR . 'admin/admin-page.php';
+        include LLMS_PLUGIN_DIR . 'admin/modern-admin-page.php';
     }
 
     public function handle_cache_clearing() {
