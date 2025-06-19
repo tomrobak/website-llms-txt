@@ -562,7 +562,7 @@ class LLMS_Generator
 
         $aioseo_enabled = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}aioseo_posts'") === "{$wpdb->prefix}aioseo_posts";
         if($aioseo_enabled) {
-            $row = $wpdb->get_row("SELECT robots_noindex, robots_nofollow FROM {$wpdb->prefix}aioseo_posts WHERE post_id=" . intval($post_id));
+            $row = $wpdb->get_row($wpdb->prepare("SELECT robots_noindex, robots_nofollow FROM {$wpdb->prefix}aioseo_posts WHERE post_id = %d", $post_id));
             if(isset($row->robots_noindex) && $row->robots_noindex) {
                 $show = 0;
             }
@@ -573,9 +573,11 @@ class LLMS_Generator
         }
 
         $excerpts = $this->remove_shortcodes($post->post_excerpt);
-        ob_start();
-        echo $this->content_cleaner->clean($this->remove_emojis( $this->remove_shortcodes(do_shortcode(get_the_content(null, false, $post)))));
-        $content = ob_get_contents();
+        
+        // Process content directly without ob_start() to prevent memory leaks
+        $raw_content = get_the_content(null, false, $post);
+        $processed_content = do_shortcode($raw_content);
+        $content = $this->content_cleaner->clean($this->remove_emojis($this->remove_shortcodes($processed_content)));
 
         $wpdb->replace(
             $table,

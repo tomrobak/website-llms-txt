@@ -61,6 +61,11 @@ class LLMS_Core {
     }
 
     public function dismiss_llms_admin_notice() {
+        // Security check: ensure user has proper capabilities
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+        
         check_ajax_referer('llms_dismiss_notice', 'nonce');
         update_user_meta(get_current_user_id(), 'llms_notice_dismissed', 1);
         wp_send_json_success();
