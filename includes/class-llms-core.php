@@ -307,8 +307,7 @@ class LLMS_Core {
             'Llms.txt',
             'manage_options',
             'llms-file-manager',
-            array($this, 'render_admin_page'),
-            'dashicons-media-text'
+            array($this, 'render_admin_page')
         );
     }
 

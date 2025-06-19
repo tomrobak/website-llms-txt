@@ -66,7 +66,7 @@ class LLMS_Generator
             $charset_collate = $wpdb->get_charset_collate();
             $sql = "CREATE TABLE $table (
                 `post_id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,
-                `show` TINYINT NULL DEFAULT NULL,
+                `is_visible` TINYINT NULL DEFAULT NULL,
                 `status` VARCHAR(20) DEFAULT NULL,
                 `type` VARCHAR(20) DEFAULT NULL,
                 `title` TEXT DEFAULT NULL,
@@ -82,7 +82,7 @@ class LLMS_Generator
                 `content` LONGTEXT DEFAULT NULL,
                 `published` DATETIME DEFAULT NULL,
                 `modified` DATETIME DEFAULT NULL,
-                KEY idx_type_show_status (type, show, status),
+                KEY idx_type_visible_status (type, is_visible, status),
                 KEY idx_published (published),
                 KEY idx_stock_status (stock_status),
                 KEY idx_product_type (product_type)
@@ -110,9 +110,9 @@ class LLMS_Generator
             $existing_indexes[] = $index->Key_name;
         }
         
-        // Add composite index for type, show, status if not exists
-        if (!in_array('idx_type_show_status', $existing_indexes)) {
-            $wpdb->query("ALTER TABLE {$table} ADD INDEX idx_type_show_status (type, show, status)");
+        // Add composite index for type, is_visible, status if not exists
+        if (!in_array('idx_type_visible_status', $existing_indexes)) {
+            $wpdb->query("ALTER TABLE {$table} ADD INDEX idx_type_visible_status (type, is_visible, status)");
         }
         
         // Add index for published date if not exists
@@ -134,6 +134,11 @@ class LLMS_Generator
         $column_names = array();
         foreach ($columns as $column) {
             $column_names[] = $column->Field;
+        }
+        
+        // Migrate 'show' column to 'is_visible' if needed
+        if (in_array('show', $column_names) && !in_array('is_visible', $column_names)) {
+            $wpdb->query("ALTER TABLE {$table} CHANGE COLUMN `show` `is_visible` TINYINT NULL DEFAULT NULL");
         }
         
         if (!in_array('stock_status', $column_names)) {
@@ -458,7 +463,7 @@ class LLMS_Generator
             $exit = false;
 
             do {
-                $conditions = " WHERE `type` = %s AND `show`=1 AND `status`='publish' ";
+                $conditions = " WHERE `type` = %s AND `is_visible`=1 AND `status`='publish' ";
                 $params = [
                     $post_type,
                     $this->limit,
@@ -555,7 +560,7 @@ class LLMS_Generator
             $i = 0;
 
             do {
-                $conditions = " WHERE `type` = %s AND `show`=1 AND `status`='publish' ";
+                $conditions = " WHERE `type` = %s AND `is_visible`=1 AND `status`='publish' ";
                 $params = [
                     $post_type,
                     $this->limit,
@@ -844,21 +849,21 @@ class LLMS_Generator
             $clean_description = preg_replace('/[\x{00A0}\x{200B}\x{200C}\x{200D}\x{FEFF}]/u', ' ', $meta_description);
         }
 
-        $show = 1;
+        $is_visible = 1;
         $use_yoast = class_exists('WPSEO_Meta');
         $use_rankmath = function_exists('rank_math');
         if($use_yoast) {
             $robots_noindex = get_post_meta($post_id, '_yoast_wpseo_meta-robots-noindex', true);
             $robots_nofollow = get_post_meta($post_id, '_yoast_wpseo_meta-robots-nofollow', true);
             if($robots_noindex || $robots_nofollow) {
-                $show = 0;
+                $is_visible = 0;
             }
         }
 
         if ($use_rankmath) {
             $robots_noindex = get_post_meta($post_id, 'rank_math_robots', true);
             if($robots_noindex) {
-                $show = 0;
+                $is_visible = 0;
             }
         }
 
@@ -866,16 +871,16 @@ class LLMS_Generator
         if($aioseo_enabled) {
             $row = $wpdb->get_row($wpdb->prepare("SELECT robots_noindex, robots_nofollow FROM {$wpdb->prefix}aioseo_posts WHERE post_id = %d", $post_id));
             if(isset($row->robots_noindex) && $row->robots_noindex) {
-                $show = 0;
+                $is_visible = 0;
             }
 
             if(isset($row->robots_nofollow) && $row->robots_nofollow) {
-                $show = 0;
+                $is_visible = 0;
             }
         }
         
         // Allow developers to override whether to include a post
-        $show = apply_filters('llms_txt_include_post', $show, $post_id, $post);
+        $is_visible = apply_filters('llms_txt_include_post', $is_visible, $post_id, $post);
 
         $excerpts = $this->remove_shortcodes($post->post_excerpt);
         
@@ -888,7 +893,7 @@ class LLMS_Generator
             $table,
             [
                 'post_id' => $post_id,
-                'show' => $show,
+                'is_visible' => $is_visible,
                 'status' => $post->post_status,
                 'type' => $post->post_type,
                 'title' => $post->post_title,
