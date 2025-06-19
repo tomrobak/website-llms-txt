@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: Website LLMs.txt
- * Description: Manages and automatically generates LLMS.txt files for LLM/AI consumption and integrates with SEO plugins (Yoast SEO, RankMath)
- * Version: 6.1.2
- * Author: Website LLM
- * Author URI: https://www.websitellm.com
- * Text Domain: website-llms-txt
+ * Plugin Name: WP LLMs.txt
+ * Description: Manages and automatically generates LLMS.txt files for LLM/AI consumption and integrates with SEO plugins (Yoast SEO, RankMath). Originally created by Website LLM (https://www.websitellm.com) - forked and modified by Tom Robak.
+ * Version: 1.0
+ * Author: Tom Robak
+ * Author URI: https://tomrobak.com
+ * Text Domain: wp-llms-txt
  * Domain Path: /languages
  * Requires at least: 5.8
  * Requires PHP: 7.2
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('LLMS_VERSION', '6.1.2');
+define('LLMS_VERSION', '1.0');
 define('LLMS_PLUGIN_FILE', __FILE__);
 define('LLMS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('LLMS_PLUGIN_URL', plugin_dir_url(__FILE__));

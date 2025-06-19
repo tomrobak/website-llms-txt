@@ -2,7 +2,7 @@
 /**
  * LLMS Content Cleaner
  *
- * @package Website_LLMS_TXT
+ * @package WP_LLMS_TXT
  */
 
 if (!defined('ABSPATH')) {

@@ -44,7 +44,7 @@ class LLMS_Core {
         }
         ?>
         <div class="notice updated is-dismissible llms-admin-notice">
-            <p><?php _e('Website LLMs.txt - Want new features? Suggest and vote to shape our plugin development roadmap.', 'website-llms-txt'); ?>
+            <p><?php _e('WP LLMs.txt - Want new features? Suggest and vote to shape our plugin development roadmap.', 'wp-llms-txt'); ?>
                 <a href="https://x.com/ryhowww/status/1909712881387462772" target="_blank">Twitter</a> |
                 <a href="https://wordpress.org/support/?post_type=topic&p=18406423">WP Forums</a>
             </p>
@@ -226,7 +226,7 @@ class LLMS_Core {
     }
 
     public function add_settings_link($links) {
-        $settings_link = '<a href="admin.php?page=llms-file-manager">' . __('Settings', 'website-llms-txt') . '</a>';
+        $settings_link = '<a href="admin.php?page=llms-file-manager">' . __('Settings', 'wp-llms-txt') . '</a>';
         array_unshift($links, $settings_link);
         return $links;
     }

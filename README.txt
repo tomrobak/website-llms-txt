@@ -1,18 +1,18 @@
-=== Website LLMs.txt ===
-Contributors: ryhowa, samsonovteamwork
+=== WP LLMs.txt ===
+Contributors: tomrobak
 Tags: llm, ai, seo, rankmath, yoast
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.2
-Stable tag: 6.1.2
+Stable tag: 1.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Automatically generate and manage LLMS.txt files for LLM/AI content understanding, with full Yoast SEO and RankMath integration.
+Automatically generate and manage LLMS.txt files for LLM/AI content understanding, with full Yoast SEO and RankMath integration. Originally created by Website LLM - forked and maintained by Tom Robak.
 
 == Description ==
 
-Website LLMs.txt helps your website become discoverable in the age of generative AI.
+WP LLMs.txt helps your website become discoverable in the age of generative AI.
 
 This plugin automatically generates an LLMs.txt file — a simple, structured list of important public URLs from your site — designed specifically for Large Language Models (LLMs) like ChatGPT, Perplexity, Claude, and other AI systems.
 It works much like a traditional XML sitemap, but is optimized for the way AI agents read and learn from the web.
@@ -36,7 +36,7 @@ Features:
 
 == Installation ==
 
-1. Upload the plugin files to `/wp-content/plugins/website-llms-txt`
+1. Upload the plugin files to `/wp-content/plugins/wp-llms-txt`
 2. Activate the plugin through the 'Plugins' screen in WordPress
 3. Use the Settings->LLMS.txt screen to configure the plugin
 
@@ -62,6 +62,18 @@ You can choose between immediate, daily, or weekly updates in the plugin setting
 4. Manual file upload interface
 
 == Changelog ==
+
+= 1.0 =
+🔄 Fork Release
+• Forked from Website LLMs.txt (v6.1.2) by Website LLM (https://www.websitellm.com)
+• Updated plugin name to "WP LLMs.txt"
+• Updated author to Tom Robak (https://tomrobak.com)
+• Updated text domain to 'wp-llms-txt'
+• Reset version to 1.0 for clean fork starting point
+• Maintained all original functionality and features
+• Added proper attribution to original authors
+
+== Previous Changelog (Original Plugin) ==
 
 = 6.1.2 =
 
