@@ -66,6 +66,9 @@ release/
 .env.development.local
 .env.test.local
 .env.production.local
+claude.md
+.claude 
+fix.md
 
 # PHPStorm
 .phpstorm.meta.php
