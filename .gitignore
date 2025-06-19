@@ -80,3 +80,5 @@ composer.lock
 # Testing
 /tests/tmp/
 /tests/logs/
+test-*.php
+*-test.php
