@@ -22,6 +22,10 @@ class LLMS_Core {
         // Handle cache clearing
         add_action('admin_post_clear_caches', array($this, 'handle_cache_clearing'));
         add_action('admin_post_clear_error_log', array($this, 'handle_clear_error_log'));
+        
+        // Handle import/export
+        add_action('admin_post_llms_export_settings', array($this, 'handle_export_settings'));
+        add_action('admin_post_llms_import_settings', array($this, 'handle_import_settings'));
 
         // Initialize SEO integrations before post type registration
         add_action('init', array($this, 'init_seo_integrations'), -1);
@@ -387,5 +391,118 @@ class LLMS_Core {
                 exit;
             }
         }
+    }
+    
+    public function handle_export_settings() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        check_admin_referer('llms_export_settings', 'llms_export_nonce');
+        
+        $settings = get_option('llms_generator_settings', array());
+        
+        // Add plugin version for compatibility checks
+        $export_data = array(
+            'plugin_version' => LLMS_VERSION,
+            'export_date' => current_time('mysql'),
+            'site_url' => get_site_url(),
+            'settings' => $settings
+        );
+        
+        $filename = 'wp-llms-txt-settings-' . date('Y-m-d-His') . '.json';
+        
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename=' . $filename);
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        echo wp_json_encode($export_data, JSON_PRETTY_PRINT);
+        exit;
+    }
+    
+    public function handle_import_settings() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        check_admin_referer('llms_import_settings', 'llms_import_nonce');
+        
+        // Check if file was uploaded
+        if (!isset($_FILES['llms_import_file']) || $_FILES['llms_import_file']['error'] !== UPLOAD_ERR_OK) {
+            wp_safe_redirect(add_query_arg(array(
+                'page' => 'llms-file-manager',
+                'error' => 'import_file_error'
+            ), admin_url('admin.php')));
+            exit;
+        }
+        
+        $file = $_FILES['llms_import_file'];
+        
+        // Validate file type
+        if ($file['type'] !== 'application/json' && pathinfo($file['name'], PATHINFO_EXTENSION) !== 'json') {
+            wp_safe_redirect(add_query_arg(array(
+                'page' => 'llms-file-manager',
+                'error' => 'import_invalid_file'
+            ), admin_url('admin.php')));
+            exit;
+        }
+        
+        // Validate file size (1MB max)
+        if ($file['size'] > 1048576) {
+            wp_safe_redirect(add_query_arg(array(
+                'page' => 'llms-file-manager',
+                'error' => 'import_file_too_large'
+            ), admin_url('admin.php')));
+            exit;
+        }
+        
+        // Read and parse file
+        $json_content = file_get_contents($file['tmp_name']);
+        $import_data = json_decode($json_content, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($import_data)) {
+            wp_safe_redirect(add_query_arg(array(
+                'page' => 'llms-file-manager',
+                'error' => 'import_invalid_json'
+            ), admin_url('admin.php')));
+            exit;
+        }
+        
+        // Validate structure
+        if (!isset($import_data['settings']) || !is_array($import_data['settings'])) {
+            wp_safe_redirect(add_query_arg(array(
+                'page' => 'llms-file-manager',
+                'error' => 'import_invalid_format'
+            ), admin_url('admin.php')));
+            exit;
+        }
+        
+        // Backup current settings
+        $current_settings = get_option('llms_generator_settings', array());
+        update_option('llms_generator_settings_backup', $current_settings);
+        
+        // Import settings
+        $new_settings = $this->sanitize_settings($import_data['settings']);
+        update_option('llms_generator_settings', $new_settings);
+        
+        // Clear cache after import
+        $upload_dir = wp_upload_dir();
+        $upload_path = $upload_dir['basedir'] . '/llms.txt';
+        if (file_exists($upload_path)) {
+            unlink($upload_path);
+        }
+        
+        // Schedule regeneration
+        wp_clear_scheduled_hook('llms_update_llms_file_cron');
+        wp_schedule_single_event(time() + 2, 'llms_update_llms_file_cron');
+        
+        // Redirect with success message
+        wp_safe_redirect(add_query_arg(array(
+            'page' => 'llms-file-manager',
+            'import_success' => 'true',
+            '_wpnonce' => wp_create_nonce('llms_import_success')
+        ), admin_url('admin.php')));
+        exit;
     }
 }

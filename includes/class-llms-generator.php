@@ -73,6 +73,9 @@ class LLMS_Generator
                 `link` VARCHAR(255) DEFAULT NULL,
                 `sku` VARCHAR(255) DEFAULT NULL,
                 `price` VARCHAR(125) DEFAULT NULL,
+                `stock_status` VARCHAR(50) DEFAULT NULL,
+                `stock_quantity` INT DEFAULT NULL,
+                `product_type` VARCHAR(50) DEFAULT NULL,
                 `excerpts` TEXT DEFAULT NULL,
                 `overview` TEXT DEFAULT NULL,
                 `meta` TEXT DEFAULT NULL,
@@ -80,7 +83,9 @@ class LLMS_Generator
                 `published` DATETIME DEFAULT NULL,
                 `modified` DATETIME DEFAULT NULL,
                 KEY idx_type_show_status (type, show, status),
-                KEY idx_published (published)
+                KEY idx_published (published),
+                KEY idx_stock_status (stock_status),
+                KEY idx_product_type (product_type)
             ) $charset_collate;";
 
             dbDelta($sql);
@@ -113,6 +118,34 @@ class LLMS_Generator
         // Add index for published date if not exists
         if (!in_array('idx_published', $existing_indexes)) {
             $wpdb->query("ALTER TABLE {$table} ADD INDEX idx_published (published)");
+        }
+        
+        // Add WooCommerce indexes if they don't exist
+        if (!in_array('idx_stock_status', $existing_indexes)) {
+            $wpdb->query("ALTER TABLE {$table} ADD INDEX idx_stock_status (stock_status)");
+        }
+        
+        if (!in_array('idx_product_type', $existing_indexes)) {
+            $wpdb->query("ALTER TABLE {$table} ADD INDEX idx_product_type (product_type)");
+        }
+        
+        // Add WooCommerce columns if they don't exist  
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM {$table}");
+        $column_names = array();
+        foreach ($columns as $column) {
+            $column_names[] = $column->Field;
+        }
+        
+        if (!in_array('stock_status', $column_names)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN stock_status VARCHAR(50) DEFAULT NULL AFTER price");
+        }
+        
+        if (!in_array('stock_quantity', $column_names)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN stock_quantity INT DEFAULT NULL AFTER stock_status");
+        }
+        
+        if (!in_array('product_type', $column_names)) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN product_type VARCHAR(50) DEFAULT NULL AFTER stock_quantity");
         }
     }
 
@@ -336,6 +369,9 @@ class LLMS_Generator
         // Set initial progress
         LLMS_Progress::set_progress('generate_content', 0, 4, __('Starting content generation...', 'wp-llms-txt'));
         
+        // Fire action before generation starts
+        do_action('llms_txt_before_generate', $this->settings);
+        
         $this->updates_all_posts();
         LLMS_Progress::set_progress('generate_content', 1, 4, __('Generating site info...', 'wp-llms-txt'));
         
@@ -347,6 +383,9 @@ class LLMS_Generator
         
         $this->generate_detailed_content();
         LLMS_Progress::set_progress('generate_content', 4, 4, __('Content generation completed!', 'wp-llms-txt'));
+        
+        // Fire action after generation completes
+        do_action('llms_txt_after_generate', $this->upload_path, $this->settings);
         
         // Clear progress after completion
         LLMS_Progress::clear_progress();
@@ -402,7 +441,11 @@ class LLMS_Generator
         }
 
         $table_cache = $wpdb->prefix . 'llms_txt_cache';
-        foreach ($this->settings['post_types'] as $post_type) {
+        
+        // Allow developers to filter post types
+        $post_types = apply_filters('llms_txt_post_types', $this->settings['post_types']);
+        
+        foreach ($post_types as $post_type) {
             if ($post_type === 'llms_txt') continue;
 
             $post_type_obj = get_post_type_object($post_type);
@@ -429,14 +472,20 @@ class LLMS_Generator
                 }
                 if (!empty($posts)) {
                     $output = '';
+                    
+                    // Allow developers to filter max posts per type
+                    $max_posts = apply_filters('llms_txt_max_posts_per_type', $this->settings['max_posts'], $post_type);
+                    
                     foreach ($posts as $data) {
-                        if($i > $this->settings['max_posts']) {
+                        if($i > $max_posts) {
                             $exit = true;
                             break;
                         }
 
                         if($data->overview) {
-                            $output .= $data->overview;
+                            // Allow developers to filter overview content
+                            $overview = apply_filters('llms_txt_overview_content', $data->overview, $data->post_id, $post_type);
+                            $output .= $overview;
                             $i++;
                         }
 
@@ -485,7 +534,10 @@ class LLMS_Generator
 
         $table_cache = $wpdb->prefix . 'llms_txt_cache';
 
-        foreach ($this->settings['post_types'] as $post_type) {
+        // Allow developers to filter post types
+        $post_types = apply_filters('llms_txt_post_types', $this->settings['post_types']);
+        
+        foreach ($post_types as $post_type) {
             if ($post_type === 'llms_txt') continue;
 
             $post_type_obj = get_post_type_object($post_type);
@@ -513,9 +565,13 @@ class LLMS_Generator
                 $posts = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
                 if (!empty($posts)) {
                     $output = '';
+                    
+                    // Allow developers to filter max posts per type
+                    $max_posts = apply_filters('llms_txt_max_posts_per_type', $this->settings['max_posts'], $post_type);
+                    
                     foreach ($posts as $data) {
                         if (!$data->content) continue;
-                        if ($i > $this->settings['max_posts']) {
+                        if ($i > $max_posts) {
                             $exit = true;
                             break;
                         }
@@ -529,12 +585,29 @@ class LLMS_Generator
                             $output .= "- Modified: " . esc_html(date('Y-m-d', strtotime($data->modified))) . "\n";
                             $output .= "- URL: " . esc_html($data->link) . "\n";
 
-                            if ($data->sku) {
-                                $output .= '- SKU: ' . esc_html($data->sku) . "\n";
-                            }
+                            // WooCommerce product data
+                            if ($data->type === 'product' && class_exists('WooCommerce')) {
+                                if ($data->sku) {
+                                    $output .= '- SKU: ' . esc_html($data->sku) . "\n";
+                                }
 
-                            if ($data->price) {
-                                $output .= '- Price: ' . esc_html($data->price) . "\n";
+                                if ($data->price) {
+                                    $output .= '- Price: ' . esc_html($data->price) . "\n";
+                                }
+                                
+                                if ($data->stock_status) {
+                                    $stock_label = $data->stock_status === 'instock' ? 'In Stock' : 
+                                                  ($data->stock_status === 'outofstock' ? 'Out of Stock' : 'On Backorder');
+                                    $output .= '- Availability: ' . esc_html($stock_label);
+                                    if ($data->stock_quantity && $data->stock_status === 'instock') {
+                                        $output .= ' (' . esc_html($data->stock_quantity) . ' available)';
+                                    }
+                                    $output .= "\n";
+                                }
+                                
+                                if ($data->product_type && $data->product_type !== 'simple') {
+                                    $output .= '- Product Type: ' . esc_html(ucfirst($data->product_type)) . "\n";
+                                }
                             }
 
                             if ($this->settings['include_taxonomies']) {
@@ -550,6 +623,10 @@ class LLMS_Generator
                         }
 
                         $content = wp_trim_words($data->content, $this->settings['max_words'] ?? 250, '...');
+                        
+                        // Allow developers to filter the content
+                        $content = apply_filters('llms_txt_content', $content, $data->post_id, $post_type);
+                        
                         $output .= "\n";
 
                         if ($this->settings['include_excerpts'] && $data->excerpts) {
@@ -645,6 +722,32 @@ class LLMS_Generator
         }
         return false;
     }
+    
+    private function get_variable_product_price_range( $product_id )
+    {
+        global $wpdb;
+        
+        $prices = $wpdb->get_results($wpdb->prepare("
+            SELECT MIN(CAST(meta_value AS DECIMAL(10,2))) as min_price, 
+                   MAX(CAST(meta_value AS DECIMAL(10,2))) as max_price
+            FROM {$wpdb->postmeta} pm
+            INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+            WHERE p.post_parent = %d 
+            AND p.post_type = 'product_variation'
+            AND p.post_status = 'publish'
+            AND pm.meta_key = '_price'
+            AND pm.meta_value != ''
+        ", $product_id));
+        
+        if (!empty($prices) && $prices[0]->min_price !== null) {
+            return array(
+                'min' => $prices[0]->min_price,
+                'max' => $prices[0]->max_price
+            );
+        }
+        
+        return false;
+    }
 
     /**
      * @param int $post_id
@@ -682,12 +785,56 @@ class LLMS_Generator
             $overview = sprintf("- [%s](%s): %s\n", $post->post_title, $permalink, preg_replace('/[\x{00A0}\x{200B}\x{200C}\x{200D}\x{FEFF}]/u', ' ', $description));
         }
 
-        if (isset($post->post_type) && $post->post_type === 'product') {
+        if (isset($post->post_type) && $post->post_type === 'product' && class_exists('WooCommerce')) {
+            // Basic product data
             $sku = get_post_meta($post->ID, '_sku', true);
             $price = get_post_meta($post->ID, '_price', true);
+            $regular_price = get_post_meta($post->ID, '_regular_price', true);
+            $sale_price = get_post_meta($post->ID, '_sale_price', true);
             $currency = get_option('woocommerce_currency');
+            
+            // Format price with currency
             if (!empty($price)) {
-                $price = number_format((float)$price, 2) . " " . $currency;
+                if ($sale_price && $sale_price < $regular_price) {
+                    $price = sprintf('%s %s (was %s %s)', 
+                        number_format((float)$sale_price, 2), 
+                        $currency,
+                        number_format((float)$regular_price, 2),
+                        $currency
+                    );
+                } else {
+                    $price = number_format((float)$price, 2) . " " . $currency;
+                }
+            }
+            
+            // Stock status
+            $stock_status = get_post_meta($post->ID, '_stock_status', true);
+            $stock_quantity = get_post_meta($post->ID, '_stock', true);
+            
+            // Product type
+            $product_type = wp_get_post_terms($post->ID, 'product_type', array('fields' => 'names'));
+            $product_type = !empty($product_type) ? $product_type[0] : 'simple';
+            
+            // Handle variations for variable products
+            if ($product_type === 'variable') {
+                $variations = get_posts(array(
+                    'post_type' => 'product_variation',
+                    'post_parent' => $post->ID,
+                    'posts_per_page' => -1,
+                    'post_status' => 'publish'
+                ));
+                
+                if (!empty($variations)) {
+                    $variation_count = count($variations);
+                    $price_range = $this->get_variable_product_price_range($post->ID);
+                    if ($price_range) {
+                        $price = sprintf('%s - %s %s', 
+                            number_format((float)$price_range['min'], 2),
+                            number_format((float)$price_range['max'], 2),
+                            $currency
+                        );
+                    }
+                }
             }
         }
 
@@ -726,6 +873,9 @@ class LLMS_Generator
                 $show = 0;
             }
         }
+        
+        // Allow developers to override whether to include a post
+        $show = apply_filters('llms_txt_include_post', $show, $post_id, $post);
 
         $excerpts = $this->remove_shortcodes($post->post_excerpt);
         
@@ -743,8 +893,11 @@ class LLMS_Generator
                 'type' => $post->post_type,
                 'title' => $post->post_title,
                 'link' => $permalink,
-                'sku' => $sku,
-                'price' => $price,
+                'sku' => isset($sku) ? $sku : null,
+                'price' => isset($price) ? $price : null,
+                'stock_status' => isset($stock_status) ? $stock_status : null,
+                'stock_quantity' => isset($stock_quantity) ? $stock_quantity : null,
+                'product_type' => isset($product_type) ? $product_type : null,
                 'meta' => $clean_description,
                 'excerpts' => $excerpts,
                 'overview' => $overview,
@@ -759,6 +912,9 @@ class LLMS_Generator
                 '%s',
                 '%s',
                 '%s',
+                '%s',
+                '%s',
+                '%d',
                 '%s',
                 '%s',
                 '%s',

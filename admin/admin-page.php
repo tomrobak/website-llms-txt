@@ -50,13 +50,31 @@ if (isset($_GET['error_log_cleared']) && $_GET['error_log_cleared'] === 'true' &
     }
 }
 
+// Check for import success
+if (isset($_GET['import_success']) && $_GET['import_success'] === 'true' &&
+    isset($_GET['_wpnonce'])) {
+    $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce']));
+    if (wp_verify_nonce($nonce, 'llms_import_success')) {
+        $notices[] = array(
+            'type' => 'success',
+            'message' => __('✅ Settings imported successfully! The LLMS.txt file will be regenerated with imported settings.', 'wp-llms-txt'),
+            'dismissible' => true
+        );
+    }
+}
+
 // Check for errors
 if (isset($_GET['error'])) {
     $error_code = sanitize_text_field($_GET['error']);
     $error_messages = array(
         'no_post_types' => __('⚠️ Please select at least one post type to include in your LLMS.txt file.', 'wp-llms-txt'),
         'generation_failed' => __('❌ Failed to generate LLMS.txt file. Please check file permissions and try again.', 'wp-llms-txt'),
-        'permission_denied' => __('❌ Permission denied. Please check your user capabilities.', 'wp-llms-txt')
+        'permission_denied' => __('❌ Permission denied. Please check your user capabilities.', 'wp-llms-txt'),
+        'import_file_error' => __('❌ Failed to upload import file. Please try again.', 'wp-llms-txt'),
+        'import_invalid_file' => __('❌ Invalid file type. Please upload a JSON file.', 'wp-llms-txt'),
+        'import_file_too_large' => __('❌ File too large. Maximum allowed size is 1MB.', 'wp-llms-txt'),
+        'import_invalid_json' => __('❌ Invalid JSON format. Please check your export file.', 'wp-llms-txt'),
+        'import_invalid_format' => __('❌ Invalid settings format. Please use a file exported from this plugin.', 'wp-llms-txt')
     );
     
     if (isset($error_messages[$error_code])) {
@@ -352,6 +370,42 @@ foreach ($notices as $notice) {
             <?php wp_nonce_field('clear_caches', 'clear_caches_nonce'); ?>
             <p class="submit">
                 <?php submit_button(esc_html__('Clear Caches', 'wp-llms-txt'), 'primary', 'submit', false); ?>
+            </p>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h2><?php esc_html_e('⚙️ Import/Export Settings', 'wp-llms-txt'); ?></h2>
+        <p><?php esc_html_e('Backup your settings or transfer them between sites.', 'wp-llms-txt'); ?></p>
+        
+        <h3><?php esc_html_e('Export Settings', 'wp-llms-txt'); ?></h3>
+        <p><?php esc_html_e('Export your current plugin settings as a JSON file.', 'wp-llms-txt'); ?></p>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <input type="hidden" name="action" value="llms_export_settings">
+            <?php wp_nonce_field('llms_export_settings', 'llms_export_nonce'); ?>
+            <p class="submit">
+                <input type="submit" class="button button-secondary" value="<?php esc_attr_e('Download Settings', 'wp-llms-txt'); ?>">
+            </p>
+        </form>
+        
+        <hr style="margin: 30px 0;">
+        
+        <h3><?php esc_html_e('Import Settings', 'wp-llms-txt'); ?></h3>
+        <p><?php esc_html_e('Import settings from a previously exported JSON file.', 'wp-llms-txt'); ?></p>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="llms_import_settings">
+            <?php wp_nonce_field('llms_import_settings', 'llms_import_nonce'); ?>
+            <p>
+                <label for="llms_import_file">
+                    <?php esc_html_e('Choose file:', 'wp-llms-txt'); ?>
+                    <input type="file" name="llms_import_file" id="llms_import_file" accept=".json">
+                </label>
+            </p>
+            <p class="description">
+                <?php esc_html_e('Maximum file size: 1MB. Only JSON files are accepted.', 'wp-llms-txt'); ?>
+            </p>
+            <p class="submit">
+                <input type="submit" class="button button-secondary" value="<?php esc_attr_e('Import Settings', 'wp-llms-txt'); ?>">
             </p>
         </form>
     </div>
