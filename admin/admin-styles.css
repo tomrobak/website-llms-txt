@@ -43,3 +43,29 @@
     margin-bottom: 15px;
 }
 
+/* Validation styles */
+.error-border {
+    border: 2px solid #dc3232 !important;
+    background-color: #fcf0f1;
+}
+
+input.error {
+    border-color: #dc3232 !important;
+}
+
+.field-error {
+    display: block;
+    color: #dc3232;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.llms-validation-error {
+    margin: 15px 0;
+}
+
+.llms-validation-error ul {
+    margin-left: 20px;
+    list-style-type: disc;
+}
+

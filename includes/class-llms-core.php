@@ -21,6 +21,7 @@ class LLMS_Core {
 
         // Handle cache clearing
         add_action('admin_post_clear_caches', array($this, 'handle_cache_clearing'));
+        add_action('admin_post_clear_error_log', array($this, 'handle_clear_error_log'));
 
         // Initialize SEO integrations before post type registration
         add_action('init', array($this, 'init_seo_integrations'), -1);
@@ -150,6 +151,12 @@ class LLMS_Core {
 
     public function sanitize_settings($value) {
         if (!is_array($value)) {
+            add_settings_error(
+                'llms_generator_settings',
+                'invalid_data',
+                __('Invalid settings data format.', 'wp-llms-txt'),
+                'error'
+            );
             return array();
         }
         $clean = array();
@@ -162,6 +169,22 @@ class LLMS_Core {
                 if (in_array($type, $valid_types) && $type !== 'attachment' && $type !== 'llms_txt') {
                     $clean['post_types'][] = sanitize_key($type);
                 }
+            }
+        }
+        
+        // Validate that at least one post type is selected
+        if (empty($clean['post_types'])) {
+            add_settings_error(
+                'llms_generator_settings',
+                'no_post_types',
+                __('Please select at least one post type to include in the LLMS.txt file.', 'wp-llms-txt'),
+                'error'
+            );
+            
+            // Keep previous value if validation fails
+            $old_settings = get_option('llms_generator_settings');
+            if (isset($old_settings['post_types']) && !empty($old_settings['post_types'])) {
+                $clean['post_types'] = $old_settings['post_types'];
             }
         }
         
@@ -246,6 +269,27 @@ class LLMS_Core {
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('llms_progress_nonce')
         ));
+        
+        // Enqueue validation script
+        wp_enqueue_script(
+            'llms-validation-script',
+            LLMS_PLUGIN_URL . 'admin/validation.js',
+            array('jquery'),
+            LLMS_VERSION,
+            true
+        );
+        
+        // Localize validation messages
+        wp_localize_script('llms-validation-script', 'llmsValidation', array(
+            'messages' => array(
+                'validationFailed' => __('Validation failed. Please fix the following errors:', 'wp-llms-txt'),
+                'selectPostType' => __('Please select at least one post type.', 'wp-llms-txt'),
+                'invalidMaxPosts' => __('Maximum posts must be between 1 and 100,000.', 'wp-llms-txt'),
+                'invalidMaxWords' => __('Maximum words must be between 1 and 100,000.', 'wp-llms-txt'),
+                'invalidCustomFields' => __('Custom field keys can only contain letters, numbers, underscores, hyphens, and commas.', 'wp-llms-txt'),
+                'numberOutOfRange' => __('Value is out of allowed range.', 'wp-llms-txt')
+            )
+        ));
     }
 
     public function activate() {
@@ -298,6 +342,25 @@ class LLMS_Core {
             'page' => 'llms-file-manager',
             'cache_cleared' => 'true',
             '_wpnonce' => wp_create_nonce('llms_cache_cleared')
+        ), admin_url('admin.php')));
+        exit;
+    }
+    
+    public function handle_clear_error_log() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        check_admin_referer('clear_error_log', 'clear_error_log_nonce');
+        
+        // Clear error log transient
+        delete_transient('llms_generation_errors');
+        
+        // Redirect back with success message
+        wp_safe_redirect(add_query_arg(array(
+            'page' => 'llms-file-manager',
+            'error_log_cleared' => 'true',
+            '_wpnonce' => wp_create_nonce('llms_error_log_cleared')
         ), admin_url('admin.php')));
         exit;
     }

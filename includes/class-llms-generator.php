@@ -172,6 +172,35 @@ class LLMS_Generator
 
         file_put_contents($this->write_log, $content, FILE_APPEND | LOCK_EX);
     }
+    
+    /**
+     * Log error messages
+     * @param string $message Error message
+     * @since 1.1
+     */
+    private function log_error($message) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[WP LLMs.txt] ' . $message);
+        }
+        
+        // Also log to admin transient for display
+        $errors = get_transient('llms_generation_errors');
+        if (!is_array($errors)) {
+            $errors = array();
+        }
+        
+        $errors[] = array(
+            'message' => $message,
+            'time' => current_time('mysql')
+        );
+        
+        // Keep only last 10 errors
+        if (count($errors) > 10) {
+            $errors = array_slice($errors, -10);
+        }
+        
+        set_transient('llms_generation_errors', $errors, HOUR_IN_SECONDS);
+    }
 
     private function write_file($content)
     {
@@ -182,40 +211,82 @@ class LLMS_Generator
         if ($this->wp_filesystem) {
             if (!$this->llms_path) {
                 $upload_dir = wp_upload_dir();
+                if (isset($upload_dir['error']) && $upload_dir['error']) {
+                    $this->log_error('Failed to get upload directory: ' . $upload_dir['error']);
+                    return false;
+                }
                 $this->llms_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
             }
 
-            file_put_contents($this->llms_path, (string)$content, FILE_APPEND | LOCK_EX);
+            // Ensure directory exists
+            $dir = dirname($this->llms_path);
+            if (!file_exists($dir)) {
+                if (!wp_mkdir_p($dir)) {
+                    $this->log_error('Failed to create directory: ' . $dir);
+                    return false;
+                }
+            }
+
+            // Attempt to write file
+            $result = file_put_contents($this->llms_path, (string)$content, FILE_APPEND | LOCK_EX);
+            
+            if ($result === false) {
+                $this->log_error('Failed to write to file: ' . $this->llms_path);
+                return false;
+            }
+            
+            return true;
         }
+        
+        return false;
     }
 
     public function get_llms_content($content)
     {
-        $upload_dir = wp_upload_dir();
-        $upload_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
-        
-        // Generate cache key based on file path
-        $cache_key = 'llms_txt_content_' . md5($upload_path);
-        
-        // Try to get cached content
-        $cached_content = get_transient($cache_key);
-        
-        if (false !== $cached_content) {
-            // Return cached content
-            return $content . $cached_content;
-        }
-        
-        // File not in cache, read from disk
-        if (file_exists($upload_path)) {
-            $file_content = file_get_contents($upload_path);
-            if (false !== $file_content) {
-                // Cache for 1 hour
-                set_transient($cache_key, $file_content, HOUR_IN_SECONDS);
-                $content .= $file_content;
+        try {
+            $upload_dir = wp_upload_dir();
+            if (isset($upload_dir['error']) && $upload_dir['error']) {
+                $this->log_error('Failed to get upload directory for reading: ' . $upload_dir['error']);
+                return $content;
             }
+            
+            $upload_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
+            
+            // Generate cache key based on file path
+            $cache_key = 'llms_txt_content_' . md5($upload_path);
+            
+            // Try to get cached content
+            $cached_content = get_transient($cache_key);
+            
+            if (false !== $cached_content) {
+                // Return cached content
+                return $content . $cached_content;
+            }
+            
+            // File not in cache, read from disk
+            if (file_exists($upload_path)) {
+                // Check if file is readable
+                if (!is_readable($upload_path)) {
+                    $this->log_error('File exists but is not readable: ' . $upload_path);
+                    return $content;
+                }
+                
+                $file_content = @file_get_contents($upload_path);
+                if (false !== $file_content) {
+                    // Cache for 1 hour
+                    set_transient($cache_key, $file_content, HOUR_IN_SECONDS);
+                    $content .= $file_content;
+                } else {
+                    $this->log_error('Failed to read file contents: ' . $upload_path);
+                }
+            }
+            
+            return $content;
+            
+        } catch (Exception $e) {
+            $this->log_error('Exception in get_llms_content: ' . $e->getMessage());
+            return $content;
         }
-        
-        return $content;
     }
 
     public function updates_all_posts()
@@ -739,28 +810,42 @@ class LLMS_Generator
         }
 
         $upload_dir = wp_upload_dir();
+        if (isset($upload_dir['error']) && $upload_dir['error']) {
+            $this->log_error('Failed to get upload directory in update_llms_file: ' . $upload_dir['error']);
+            return;
+        }
+        
         $upload_path = $upload_dir['basedir'] . '/llms.txt';
         if (file_exists($upload_path)) {
-            unlink($upload_path);
+            if (!@unlink($upload_path)) {
+                $this->log_error('Failed to delete file: ' . $upload_path);
+            }
         }
 
         $upload_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
         if (file_exists($upload_path)) {
-            unlink($upload_path);
-            // Clear file content cache
-            $cache_key = 'llms_txt_content_' . md5($upload_path);
-            delete_transient($cache_key);
+            if (!@unlink($upload_path)) {
+                $this->log_error('Failed to delete file: ' . $upload_path);
+            } else {
+                // Clear file content cache
+                $cache_key = 'llms_txt_content_' . md5($upload_path);
+                delete_transient($cache_key);
+            }
         }
 
         if(defined('FLYWHEEL_PLUGIN_DIR')) {
             $file_path = dirname(ABSPATH) . 'www/' . 'llms.txt';
             if (file_exists($file_path)) {
-                unlink($file_path);
+                if (!@unlink($file_path)) {
+                    $this->log_error('Failed to delete Flywheel file: ' . $file_path);
+                }
             }
         } else {
             $file_path = ABSPATH . 'llms.txt';
             if (file_exists($file_path)) {
-                unlink($file_path);
+                if (!@unlink($file_path)) {
+                    $this->log_error('Failed to delete root file: ' . $file_path);
+                }
             }
         }
 

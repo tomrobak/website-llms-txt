@@ -37,6 +37,19 @@ if (isset($_GET['settings-updated']) &&
     }
 }
 
+// Check for error log cleared
+if (isset($_GET['error_log_cleared']) && $_GET['error_log_cleared'] === 'true' &&
+    isset($_GET['_wpnonce'])) {
+    $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce']));
+    if (wp_verify_nonce($nonce, 'llms_error_log_cleared')) {
+        $notices[] = array(
+            'type' => 'success',
+            'message' => __('✅ Error log cleared successfully!', 'wp-llms-txt'),
+            'dismissible' => true
+        );
+    }
+}
+
 // Check for errors
 if (isset($_GET['error'])) {
     $error_code = sanitize_text_field($_GET['error']);
@@ -342,4 +355,71 @@ foreach ($notices as $notice) {
             </p>
         </form>
     </div>
+    
+    <?php
+    // Display error logs if any exist
+    $errors = get_transient('llms_generation_errors');
+    if ($errors && is_array($errors) && !empty($errors)):
+    ?>
+    <div class="card">
+        <h2><?php esc_html_e('🔍 Error Log', 'wp-llms-txt'); ?></h2>
+        <p class="description"><?php esc_html_e('Recent errors encountered during file generation:', 'wp-llms-txt'); ?></p>
+        
+        <div style="background: #f5f5f5; border: 1px solid #ddd; padding: 10px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+            <?php foreach (array_reverse($errors) as $error): ?>
+                <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e0e0e0;">
+                    <strong style="color: #d63638;">[<?php echo esc_html($error['time']); ?>]</strong><br>
+                    <?php echo esc_html($error['message']); ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top: 15px;">
+            <input type="hidden" name="action" value="clear_error_log">
+            <?php wp_nonce_field('clear_error_log', 'clear_error_log_nonce'); ?>
+            <p class="submit">
+                <input type="submit" class="button" value="<?php esc_attr_e('Clear Error Log', 'wp-llms-txt'); ?>">
+            </p>
+        </form>
+    </div>
+    <?php endif; ?>
+    
+    <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+    <div class="card">
+        <h2><?php esc_html_e('🐛 Debug Information', 'wp-llms-txt'); ?></h2>
+        <table class="widefat">
+            <tbody>
+                <tr>
+                    <td><strong><?php esc_html_e('WordPress Version:', 'wp-llms-txt'); ?></strong></td>
+                    <td><?php echo esc_html(get_bloginfo('version')); ?></td>
+                </tr>
+                <tr>
+                    <td><strong><?php esc_html_e('PHP Version:', 'wp-llms-txt'); ?></strong></td>
+                    <td><?php echo esc_html(phpversion()); ?></td>
+                </tr>
+                <tr>
+                    <td><strong><?php esc_html_e('Plugin Version:', 'wp-llms-txt'); ?></strong></td>
+                    <td><?php echo esc_html(LLMS_VERSION); ?></td>
+                </tr>
+                <tr>
+                    <td><strong><?php esc_html_e('Memory Limit:', 'wp-llms-txt'); ?></strong></td>
+                    <td><?php echo esc_html(ini_get('memory_limit')); ?></td>
+                </tr>
+                <tr>
+                    <td><strong><?php esc_html_e('Max Execution Time:', 'wp-llms-txt'); ?></strong></td>
+                    <td><?php echo esc_html(ini_get('max_execution_time')); ?> seconds</td>
+                </tr>
+                <tr>
+                    <td><strong><?php esc_html_e('Upload Directory Writable:', 'wp-llms-txt'); ?></strong></td>
+                    <td><?php 
+                        $upload_dir = wp_upload_dir();
+                        echo is_writable($upload_dir['basedir']) ? 
+                            '<span style="color: green;">✓ ' . esc_html__('Yes', 'wp-llms-txt') . '</span>' : 
+                            '<span style="color: red;">✗ ' . esc_html__('No', 'wp-llms-txt') . '</span>'; 
+                    ?></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
 </div>
