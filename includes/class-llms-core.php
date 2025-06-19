@@ -1,62 +1,71 @@
 <?php
+/**
+ * LLMS Core Class - Modern PHP 8.3+ Implementation
+ * 
+ * Core plugin orchestrator with type safety and modern features
+ * 
+ * @package WP_LLMs_txt
+ * @since 2.0
+ */
+
+declare(strict_types=1);
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class LLMS_Core {
-    /** @var LLMS_Generator */
-    private $generator;
+    private ?LLMS_Generator $generator = null;
 
     public function __construct()
     {
         // Register activation hook
-        register_activation_hook(LLMS_PLUGIN_FILE, array($this, 'activate'));
+        register_activation_hook(LLMS_PLUGIN_FILE, [$this, 'activate']);
 
         // Initialize core functionality
-        add_action('init', array($this, 'init'), 0);
+        add_action('init', [$this, 'init'], 0);
 
         // Admin menu
-        add_action('admin_menu', array($this, 'add_admin_menu'));
-        add_filter('plugin_action_links_' . plugin_basename(LLMS_PLUGIN_FILE), array($this, 'add_settings_link'));
+        add_action('admin_menu', [$this, 'add_admin_menu']);
+        add_filter('plugin_action_links_' . plugin_basename(LLMS_PLUGIN_FILE), [$this, 'add_settings_link']);
 
         // Handle cache clearing and file generation
-        add_action('admin_post_clear_caches', array($this, 'handle_cache_clearing'));
-        add_action('admin_post_clear_error_log', array($this, 'handle_clear_error_log'));
-        add_action('admin_post_generate_llms_file', array($this, 'handle_generate_file'));
+        add_action('admin_post_clear_caches', [$this, 'handle_cache_clearing']);
+        add_action('admin_post_clear_error_log', [$this, 'handle_clear_error_log']);
+        add_action('admin_post_generate_llms_file', [$this, 'handle_generate_file']);
         
         // Handle import/export
-        add_action('admin_post_llms_export_settings', array($this, 'handle_export_settings'));
-        add_action('admin_post_llms_import_settings', array($this, 'handle_import_settings'));
+        add_action('admin_post_llms_export_settings', [$this, 'handle_export_settings']);
+        add_action('admin_post_llms_import_settings', [$this, 'handle_import_settings']);
 
         // Initialize SEO integrations before post type registration
-        add_action('init', array($this, 'init_seo_integrations'), -1);
+        add_action('init', [$this, 'init_seo_integrations'], -1);
 
         // Register settings
-        add_action('admin_init', array($this, 'register_settings'));
+        add_action('admin_init', [$this, 'register_settings']);
 
         // Add required scripts for admin
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
 
-        add_action('wp_head', array($this, 'wp_head'));
-
+        add_action('wp_head', [$this, 'wp_head']);
     }
 
 
-    public function wp_head() {
+    public function wp_head(): void {
         echo '<link rel="llms-sitemap" href="' . esc_url( home_url( '/llms.txt' ) ) . '" />' . "\n";
     }
 
-    public function get_llms_post() {
-        $posts = get_posts(array(
+    public function get_llms_post(): ?WP_Post {
+        $posts = get_posts([
             'post_type' => 'llms_txt',
             'posts_per_page' => 1,
             'post_status' => 'publish'
-        ));
+        ]);
 
         return !empty($posts) ? $posts[0] : null;
     }
 
-    public function init() {
+    public function init(): void {
         // Register post type
         $this->create_post_type();
         // Initialize generator after post type
@@ -64,12 +73,12 @@ class LLMS_Core {
 
         // Add rewrite rules
         $this->add_rewrite_rule();
-        add_filter('query_vars', array($this, 'add_query_vars'));
-        add_action('template_redirect', array($this, 'handle_llms_request'));
+        add_filter('query_vars', [$this, 'add_query_vars']);
+        add_action('template_redirect', [$this, 'handle_llms_request']);
     }
 
-    public function create_post_type() {
-        register_post_type('llms_txt', array(
+    public function create_post_type(): void {
+        register_post_type('llms_txt', [
             'public' => false,
             'publicly_queryable' => false,
             'show_ui' => false,
@@ -81,12 +90,12 @@ class LLMS_Core {
             'capability_type' => 'post',
             'has_archive' => false,
             'hierarchical' => false,
-            'supports' => array('title', 'editor'),
+            'supports' => ['title', 'editor'],
             'exclude_from_sitemap' => true
-        ));
+        ]);
     }
 
-    public function init_seo_integrations() {
+    public function init_seo_integrations(): void {
         if (class_exists('RankMath')) {
             require_once LLMS_PLUGIN_DIR . 'includes/class-llms-provider.php';
             require_once LLMS_PLUGIN_DIR . 'includes/rank-math.php';
@@ -97,15 +106,15 @@ class LLMS_Core {
         }
     }
 
-    public function register_settings() {
+    public function register_settings(): void {
         register_setting(
             'llms_generator_settings',
             'llms_generator_settings',
-            array(
+            [
                 'type' => 'array',
-                'sanitize_callback' => array($this, 'sanitize_settings'),
-                'default' => array(
-                    'post_types' => array('page', 'documentation', 'post'),
+                'sanitize_callback' => [$this, 'sanitize_settings'],
+                'default' => [
+                    'post_types' => ['page', 'documentation', 'post'],
                     'max_posts' => 100,
                     'max_words' => 250,
                     'include_meta' => true,
@@ -113,12 +122,12 @@ class LLMS_Core {
                     'include_taxonomies' => true,
                     'update_frequency' => 'immediate',
                     'need_check_option' => true,
-                )
-            )
+                ]
+            ]
         );
     }
 
-    public function sanitize_settings($value) {
+    public function sanitize_settings(mixed $value): array {
         if (!is_array($value)) {
             add_settings_error(
                 'llms_generator_settings',
@@ -126,14 +135,14 @@ class LLMS_Core {
                 __('Invalid settings data format.', 'wp-llms-txt'),
                 'error'
             );
-            return array();
+            return [];
         }
-        $clean = array();
+        $clean = [];
         
         // Ensure post_types is an array and contains only valid post types
-        $clean['post_types'] = array();
+        $clean['post_types'] = [];
         if (isset($value['post_types']) && is_array($value['post_types'])) {
-            $valid_types = get_post_types(array('public' => true));
+            $valid_types = get_post_types(['public' => true]);
             foreach ($value['post_types'] as $type) {
                 if (in_array($type, $valid_types) && $type !== 'attachment' && $type !== 'llms_txt') {
                     $clean['post_types'][] = sanitize_key($type);
@@ -197,7 +206,7 @@ class LLMS_Core {
         return $clean;
     }
 
-    public function enqueue_admin_scripts($hook) {
+    public function enqueue_admin_scripts(string $hook): void {
         if (!in_array($hook, ['tools_page_llms-file-manager', 'toplevel_page_llms-file-manager'])) {
             return;
         }
@@ -261,11 +270,11 @@ class LLMS_Core {
         ));
     }
 
-    public function activate() {
+    public function activate(): void {
         flush_rewrite_rules();
     }
 
-    public function add_admin_menu() {
+    public function add_admin_menu(): void {
         add_submenu_page(
             'tools.php',
             'Llms.txt',
@@ -276,17 +285,17 @@ class LLMS_Core {
         );
     }
 
-    public function add_settings_link($links) {
+    public function add_settings_link(array $links): array {
         $settings_link = '<a href="admin.php?page=llms-file-manager">' . __('Settings', 'wp-llms-txt') . '</a>';
         array_unshift($links, $settings_link);
         return $links;
     }
 
-    public function render_admin_page() {
+    public function render_admin_page(): void {
         include LLMS_PLUGIN_DIR . 'admin/modern-admin-page.php';
     }
 
-    public function handle_cache_clearing() {
+    public function handle_cache_clearing(): void {
         if (!current_user_can('manage_options')) {
             wp_die('Unauthorized');
         }
@@ -314,7 +323,7 @@ class LLMS_Core {
         exit;
     }
     
-    public function handle_clear_error_log() {
+    public function handle_clear_error_log(): void {
         if (!current_user_can('manage_options')) {
             wp_die('Unauthorized');
         }
@@ -333,7 +342,7 @@ class LLMS_Core {
         exit;
     }
     
-    public function handle_generate_file() {
+    public function handle_generate_file(): void {
         if (!current_user_can('manage_options')) {
             wp_die('Unauthorized');
         }
@@ -370,7 +379,7 @@ class LLMS_Core {
         exit;
     }
 
-    public function add_rewrite_rule() {
+    public function add_rewrite_rule(): void {
         global $wp_rewrite;
 
         if($wp_rewrite) {
@@ -378,12 +387,12 @@ class LLMS_Core {
         }
     }
 
-    public function add_query_vars($vars) {
+    public function add_query_vars(array $vars): array {
         $vars[] = 'llms_txt';
         return $vars;
     }
 
-    public function handle_llms_request() {
+    public function handle_llms_request(): void {
         if (get_query_var('llms_txt')) {
             $latest_post = apply_filters('get_llms_content', '');
             if ($latest_post) {
@@ -394,7 +403,7 @@ class LLMS_Core {
         }
     }
     
-    public function handle_export_settings() {
+    public function handle_export_settings(): void {
         if (!current_user_can('manage_options')) {
             wp_die('Unauthorized');
         }
@@ -422,7 +431,7 @@ class LLMS_Core {
         exit;
     }
     
-    public function handle_import_settings() {
+    public function handle_import_settings(): void {
         if (!current_user_can('manage_options')) {
             wp_die('Unauthorized');
         }

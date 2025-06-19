@@ -1,24 +1,33 @@
 <?php
+/**
+ * Yoast SEO Integration - Modern PHP 8.3+ Implementation
+ * 
+ * @package WP_LLMs_txt
+ * @since 2.0
+ */
+
+declare(strict_types=1);
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class LLMS_Yoast_Integration {
     private function __construct() {
-        add_action('init', array($this, 'add_rewrite_rules'), 5);
-        add_action('template_redirect', array($this, 'maybe_generate_sitemap'));
-        add_filter('wpseo_sitemap_index', array($this, 'add_to_index'));
-        add_filter('wpseo_sitemap_llms_content', array($this, 'generate_sitemap'));
-        add_action('llms_clear_seo_caches', array($this, 'clear_sitemap_cache'));
-        add_filter('query_vars', array($this, 'query_vars'));
+        add_action('init', [$this, 'add_rewrite_rules'], 5);
+        add_action('template_redirect', [$this, 'maybe_generate_sitemap']);
+        add_filter('wpseo_sitemap_index', [$this, 'add_to_index']);
+        add_filter('wpseo_sitemap_llms_content', [$this, 'generate_sitemap']);
+        add_action('llms_clear_seo_caches', [$this, 'clear_sitemap_cache']);
+        add_filter('query_vars', [$this, 'query_vars']);
     }
 
-    public function query_vars( $vars ) {
+    public function query_vars(array $vars): array {
         $vars[] = 'sitemap';
         return $vars;
     }
 
-    public function add_rewrite_rules() {
+    public function add_rewrite_rules(): void {
         global $wp_rewrite;
         $existing_rules = $wp_rewrite->wp_rewrite_rules();
         if (!isset($existing_rules['^llms-sitemap\.xml$'])) {
@@ -26,7 +35,7 @@ class LLMS_Yoast_Integration {
         }
     }
 
-    public function maybe_generate_sitemap() {
+    public function maybe_generate_sitemap(): void {
     	$sitemap = get_query_var('sitemap');
     	if ($sitemap === 'llms') {
             status_header(200);
@@ -36,7 +45,7 @@ class LLMS_Yoast_Integration {
     	}
 	}
 
-    public function generate_sitemap() {
+    public function generate_sitemap(): string {
         $latest_post = get_posts([
             'post_type' => 'llms_txt',
             'posts_per_page' => 1,
@@ -47,12 +56,12 @@ class LLMS_Yoast_Integration {
             return '';
         }
 
-        $url = array(
+        $url = [
             'loc' => home_url('/llms.txt'),
             'lastmod' => get_post_modified_time('c', true, $latest_post[0]),
             'changefreq' => 'weekly',
             'priority' => '0.8'
-        );
+        ];
 
         $xsl_url = esc_url(home_url('main-sitemap.xsl'));
         $loc = esc_url($url['loc']);

@@ -1,0 +1,67 @@
+# Development and IDE files
+.git/
+.github/
+.gitignore
+.DS_Store
+Thumbs.db
+.vscode/
+.cursor/
+*.swp
+*.swo
+*~
+
+# Claude and AI assistant files
+CLAUDE.md
+*.claude
+.claude/
+claude.md
+claude-*
+cursor.md
+cursor-*
+
+# Development documentation
+fix.md
+notes.md
+dev.md
+development.md
+Archive.zip
+
+# Build and temporary files
+node_modules/
+build/
+dist/
+release/
+temp/
+tmp/
+*.tmp
+*.temp
+
+# Log files
+*.log
+logs/
+debug.log
+error.log
+
+# IDE and editor files
+.idea/
+*.sublime-*
+.atom/
+.brackets.json
+
+# OS generated files
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+*.orig
+
+# Test files
+tests/
+test/
+phpunit.xml
+*.test.php

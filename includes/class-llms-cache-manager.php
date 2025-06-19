@@ -1,9 +1,14 @@
 <?php
 /**
- * LLMS Cache Management
- *
- * @package WP_LLMS_TXT
+ * LLMS Cache Manager Class - Modern PHP 8.3+ Implementation
+ * 
+ * Handles cache management for multiple caching plugins with type safety
+ * 
+ * @package WP_LLMs_txt
+ * @since 2.0
  */
+
+declare(strict_types=1);
 
 if (!defined('ABSPATH')) {
     exit;
@@ -15,46 +20,46 @@ class LLMS_Cache_Manager {
      */
     public function __construct() {
         // Add actions for clearing caches
-        add_action('llms_clear_seo_caches', array($this, 'clear_all_caches'));
+        add_action('llms_clear_seo_caches', [$this, 'clear_all_caches']);
         
         // Add filters for cache exclusion
-        add_action('plugins_loaded', array($this, 'setup_cache_exclusions'));
+        add_action('plugins_loaded', [$this, 'setup_cache_exclusions']);
     }
 
     /**
      * Setup cache exclusions for various caching plugins
      */
-    public function setup_cache_exclusions() {
+    public function setup_cache_exclusions(): void {
         // Autoptimize
         if (class_exists('autoptimizeCache')) {
-            add_filter('autoptimize_filter_noptimize', array($this, 'exclude_autoptimize'), 10, 1);
+            add_filter('autoptimize_filter_noptimize', [$this, 'exclude_autoptimize'], 10, 1);
         }
 
         // WP Rocket
         if (defined('WP_ROCKET_VERSION')) {
-            add_filter('rocket_cache_reject_uri', array($this, 'exclude_wp_rocket'));
+            add_filter('rocket_cache_reject_uri', [$this, 'exclude_wp_rocket']);
         }
 
         // W3 Total Cache
         if (defined('W3TC')) {
-            add_filter('w3tc_pagecache_reject_uri', array($this, 'exclude_w3_total_cache'));
+            add_filter('w3tc_pagecache_reject_uri', [$this, 'exclude_w3_total_cache']);
         }
 
         // WP Super Cache
         if (defined('WPSUPERCACHE')) {
-            add_filter('wp_cache_reject_uri', array($this, 'exclude_wp_super_cache'));
+            add_filter('wp_cache_reject_uri', [$this, 'exclude_wp_super_cache']);
         }
 
         // LiteSpeed Cache
         if (defined('LSCWP_V')) {
-            add_filter('litespeed_cache_exclude_path', array($this, 'exclude_litespeed'));
+            add_filter('litespeed_cache_exclude_path', [$this, 'exclude_litespeed']);
         }
     }
 
     /**
      * Clear all possible caches
      */
-    public function clear_all_caches() {
+    public function clear_all_caches(): void {
         $this->clear_autoptimize_cache();
         $this->clear_wp_rocket_cache();
         $this->clear_w3_total_cache();
@@ -66,7 +71,7 @@ class LLMS_Cache_Manager {
     /**
      * Clear Autoptimize cache
      */
-    private function clear_autoptimize_cache() {
+    private function clear_autoptimize_cache(): void {
         if (class_exists('autoptimizeCache')) {
             autoptimizeCache::clearall();
         }
@@ -75,7 +80,7 @@ class LLMS_Cache_Manager {
     /**
      * Clear WP Rocket cache
      */
-    private function clear_wp_rocket_cache() {
+    private function clear_wp_rocket_cache(): void {
         if (function_exists('rocket_clean_domain')) {
             rocket_clean_domain();
         }

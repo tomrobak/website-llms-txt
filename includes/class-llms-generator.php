@@ -441,7 +441,7 @@ class LLMS_Generator
         LLMS_Progress::set_progress('generate_content', 4, 4, __('Content generation completed!', 'wp-llms-txt'));
         
         // Fire action after generation completes
-        do_action('llms_txt_after_generate', $this->upload_path, $this->settings);
+        do_action('llms_txt_after_generate', $this->get_llms_file_path(), $this->settings);
         
         // Clear progress after completion
         LLMS_Progress::clear_progress();
@@ -475,7 +475,7 @@ class LLMS_Generator
 
         $clean = preg_replace('/[\x{00A0}\x{200B}\x{200C}\x{200D}\x{FEFF}\x{202A}-\x{202E}\x{2060}]/u', ' ', $clean);
 
-        $clean = html_entity_decode($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $clean = html_entity_decode($clean, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         $clean = preg_replace('/[ \t]+/', ' ', $clean);
         $clean = preg_replace('/\s{2,}/u', ' ', $clean);
@@ -526,8 +526,8 @@ class LLMS_Generator
                     \WP_CLI::log('Count: ' . count($posts));
                     \WP_CLI::log($wpdb->prepare("SELECT `post_id`, `overview` FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
                 }
+                $output = '';
                 if (!empty($posts)) {
-                    $output = '';
                     
                     // Allow developers to filter max posts per type
                     $max_posts = apply_filters('llms_txt_max_posts_per_type', $this->settings['max_posts'], $post_type);
@@ -548,7 +548,9 @@ class LLMS_Generator
                         unset($data);
                     }
 
+                    if (!empty($output)) {
                     $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+                }
                     unset($output);
                 }
 
@@ -599,7 +601,9 @@ class LLMS_Generator
             $post_type_obj = get_post_type_object($post_type);
             if (is_object($post_type_obj) && isset($post_type_obj->labels->name)) {
                 $output = "\n## " . $post_type_obj->labels->name . "\n\n";
-                $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+                if (!empty($output)) {
+                    $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+                }
             }
 
             if (defined('WP_CLI') && WP_CLI) {
@@ -619,8 +623,8 @@ class LLMS_Generator
                 ];
 
                 $posts = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
+                $output = '';
                 if (!empty($posts)) {
-                    $output = '';
                     
                     // Allow developers to filter max posts per type
                     $max_posts = apply_filters('llms_txt_max_posts_per_type', $this->settings['max_posts'], $post_type);
@@ -700,7 +704,9 @@ class LLMS_Generator
                     }
                 }
 
-                $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+                if (!empty($output)) {
+                    $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+                }
                 unset($output);
 
                 $offset += $this->limit;

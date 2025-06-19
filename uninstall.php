@@ -1,4 +1,15 @@
 <?php
+/**
+ * Uninstall Script - Modern PHP 8.3+ Implementation
+ * 
+ * Clean up all plugin data when plugin is deleted
+ * 
+ * @package WP_LLMs_txt
+ * @since 2.0
+ */
+
+declare(strict_types=1);
+
 // Exit if not called by WordPress
 if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
