@@ -3,12 +3,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-use RankMath\Sitemap\Providers\Provider;
-
-/**
- * LLMS sitemap provider.
- */
-class LLMS_Sitemap_Provider implements Provider
+// Only define the class if RankMath provider interface is available
+if (interface_exists('RankMath\Sitemap\Providers\Provider')) {
+    /**
+     * LLMS sitemap provider.
+     */
+    class LLMS_Sitemap_Provider implements \RankMath\Sitemap\Providers\Provider
 {
     /**
      * Check if provider supports given sitemap type.
@@ -72,3 +72,4 @@ class LLMS_Sitemap_Provider implements Provider
         ];
     }
 }
+} // End RankMath check

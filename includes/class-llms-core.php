@@ -19,9 +19,10 @@ class LLMS_Core {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_filter('plugin_action_links_' . plugin_basename(LLMS_PLUGIN_FILE), array($this, 'add_settings_link'));
 
-        // Handle cache clearing
+        // Handle cache clearing and file generation
         add_action('admin_post_clear_caches', array($this, 'handle_cache_clearing'));
         add_action('admin_post_clear_error_log', array($this, 'handle_clear_error_log'));
+        add_action('admin_post_generate_llms_file', array($this, 'handle_generate_file'));
         
         // Handle import/export
         add_action('admin_post_llms_export_settings', array($this, 'handle_export_settings'));
@@ -59,7 +60,6 @@ class LLMS_Core {
         // Register post type
         $this->create_post_type();
         // Initialize generator after post type
-        require_once LLMS_PLUGIN_DIR . 'includes/class-llms-generator.php';
         $this->generator = new LLMS_Generator();
 
         // Add rewrite rules
@@ -330,6 +330,43 @@ class LLMS_Core {
             'error_log_cleared' => 'true',
             '_wpnonce' => wp_create_nonce('llms_error_log_cleared')
         ), admin_url('admin.php')));
+        exit;
+    }
+    
+    public function handle_generate_file() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        check_admin_referer('generate_llms_file', 'generate_llms_file_nonce');
+        
+        // Get the generator instance
+        $generator = new LLMS_Generator();
+        
+        try {
+            // Force immediate generation
+            $generator->init_generator(true);
+            
+            // Run the generation process directly
+            do_action('llms_update_llms_file_cron');
+            
+            // Clear SEO caches
+            do_action('llms_clear_seo_caches');
+            
+            // Success redirect
+            wp_safe_redirect(add_query_arg(array(
+                'page' => 'llms-file-manager',
+                'file_generated' => 'true',
+                '_wpnonce' => wp_create_nonce('llms_file_generated')
+            ), admin_url('admin.php')));
+        } catch (Exception $e) {
+            // Error redirect
+            wp_safe_redirect(add_query_arg(array(
+                'page' => 'llms-file-manager',
+                'error' => 'generation_failed',
+                '_wpnonce' => wp_create_nonce('llms_generation_error')
+            ), admin_url('admin.php')));
+        }
         exit;
     }
 

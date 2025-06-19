@@ -24,6 +24,22 @@ if (isset($_GET['cache_cleared']) && $_GET['cache_cleared'] === 'true' &&
     }
 }
 
+// Check for file generated
+if (isset($_GET['file_generated']) && $_GET['file_generated'] === 'true' && 
+    isset($_GET['_wpnonce'])) {
+    $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce']));
+    if (wp_verify_nonce($nonce, 'llms_file_generated')) {
+        $notices[] = array(
+            'type' => 'success',
+            'message' => sprintf(
+                __('🎉 LLMS.txt file generated successfully! <a href="%s" target="_blank">View your file →</a>', 'wp-llms-txt'),
+                esc_url(home_url('/llms.txt'))
+            ),
+            'dismissible' => true
+        );
+    }
+}
+
 // Check for settings updated
 if (isset($_GET['settings-updated']) && 
     isset($_GET['_wpnonce'])) {
@@ -86,12 +102,12 @@ if (isset($_GET['error'])) {
     }
 }
 
-// File status data
-$upload_dir = wp_upload_dir();
-$file_path = $upload_dir['basedir'] . '/llms.txt';
-$file_exists = file_exists($file_path);
-$file_size = $file_exists ? filesize($file_path) : 0;
-$file_modified = $file_exists ? filemtime($file_path) : 0;
+// File status data using correct generator methods
+$generator = new LLMS_Generator();
+$file_exists = $generator->file_exists();
+$file_size = $generator->get_file_size();
+$file_modified = $generator->get_file_mtime();
+$file_path = $generator->get_llms_file_path();
 
 // Get settings
 $settings = get_option('llms_generator_settings', array(
@@ -110,10 +126,13 @@ wp_enqueue_style('llms-modern-admin', plugins_url('admin/modern-admin-styles.css
 foreach ($notices as $notice) {
     $alert_class = $notice['type'] === 'error' ? 'error' : 
                   ($notice['type'] === 'success' ? 'success' : 'info');
+    $dismissible_class = !empty($notice['dismissible']) ? ' dismissible' : '';
     printf(
-        '<div class="llms-alert %s"><p>%s</p></div>',
+        '<div class="llms-alert %s%s"><p>%s</p>%s</div>',
         esc_attr($alert_class),
-        wp_kses_post($notice['message'])
+        esc_attr($dismissible_class),
+        wp_kses_post($notice['message']),
+        !empty($notice['dismissible']) ? '<button type="button" class="llms-alert-dismiss">&times;</button>' : ''
     );
 }
 ?>
@@ -127,17 +146,21 @@ foreach ($notices as $notice) {
     <!-- Status Overview -->
     <div class="llms-card">
         <div class="llms-card-header">
-            <h2 class="llms-card-title">📊 File Status</h2>
-            <p class="llms-card-description">Current status of your LLMS.txt file</p>
+            <h2 class="llms-card-title">📊 File Status & Quick Actions</h2>
+            <p class="llms-card-description">Current status of your LLMS.txt file and generation controls</p>
         </div>
         <div class="llms-card-content">
-            <?php if ($latest_post && $file_exists): ?>
+            <?php if ($file_exists): ?>
                 <div class="llms-status success">
                     <span>✅</span>
-                    <span><?php esc_html_e('LLMS.txt is active and working!', 'wp-llms-txt'); ?></span>
+                    <span><?php esc_html_e('LLMS.txt file is active and working!', 'wp-llms-txt'); ?></span>
                 </div>
                 
                 <div class="llms-grid cols-3" style="margin-top: 1.5rem;">
+                    <div>
+                        <div class="llms-text-sm llms-text-muted">File Location</div>
+                        <div class="llms-font-semibold llms-text-xs" style="word-break: break-all;"><?php echo esc_html(basename($file_path)); ?></div>
+                    </div>
                     <div>
                         <div class="llms-text-sm llms-text-muted">File Size</div>
                         <div class="llms-font-semibold"><?php echo esc_html(size_format($file_size)); ?></div>
@@ -146,28 +169,41 @@ foreach ($notices as $notice) {
                         <div class="llms-text-sm llms-text-muted">Last Updated</div>
                         <div class="llms-font-semibold"><?php echo esc_html(human_time_diff($file_modified, current_time('timestamp')) . ' ' . __('ago', 'wp-llms-txt')); ?></div>
                     </div>
-                    <div>
-                        <div class="llms-text-sm llms-text-muted">Actions</div>
-                        <div class="llms-flex gap-2">
-                            <a href="<?php echo esc_url(home_url('/llms.txt')); ?>" target="_blank" class="llms-button small secondary">
-                                <?php esc_html_e('View File', 'wp-llms-txt'); ?> ↗
-                            </a>
-                            <?php if (class_exists('RankMath') || (defined('WPSEO_VERSION') && class_exists('WPSEO_Sitemaps'))): ?>
-                                <a href="<?php echo esc_url(home_url('/llms-sitemap.xml')); ?>" target="_blank" class="llms-button small secondary">
-                                    <?php esc_html_e('Sitemap', 'wp-llms-txt'); ?> ↗
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                </div>
+                
+                <div class="llms-flex gap-2" style="margin-top: 1.5rem; align-items: center; flex-wrap: wrap;">
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display: inline;">
+                        <input type="hidden" name="action" value="generate_llms_file">
+                        <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
+                        <button type="submit" class="llms-button primary">
+                            🔄 <?php esc_html_e('Regenerate File', 'wp-llms-txt'); ?>
+                        </button>
+                    </form>
+                    <a href="<?php echo esc_url(home_url('/llms.txt')); ?>" target="_blank" class="llms-button secondary">
+                        👁️ <?php esc_html_e('View File', 'wp-llms-txt'); ?>
+                    </a>
+                    <?php if (class_exists('RankMath') || (defined('WPSEO_VERSION') && class_exists('WPSEO_Sitemaps'))): ?>
+                        <a href="<?php echo esc_url(home_url('/llms-sitemap.xml')); ?>" target="_blank" class="llms-button secondary">
+                            🗺️ <?php esc_html_e('View Sitemap', 'wp-llms-txt'); ?>
+                        </a>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
-                <div class="llms-status error">
-                    <span>❌</span>
-                    <span><?php esc_html_e('LLMS.txt file not found', 'wp-llms-txt'); ?></span>
+                <div class="llms-status warning">
+                    <span>⚠️</span>
+                    <span><?php esc_html_e('LLMS.txt file not found - ready to generate!', 'wp-llms-txt'); ?></span>
                 </div>
-                <p class="llms-text-sm llms-text-muted llms-mt-1">
-                    <?php esc_html_e('Click "Clear Caches" in the management section to generate the file.', 'wp-llms-txt'); ?>
+                <p class="llms-text-sm llms-text-muted llms-mt-1 llms-mb-2">
+                    <?php esc_html_e('Click the button below to generate your LLMS.txt file and make your site AI-discoverable.', 'wp-llms-txt'); ?>
                 </p>
+                
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display: inline;">
+                    <input type="hidden" name="action" value="generate_llms_file">
+                    <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
+                    <button type="submit" class="llms-button primary" style="font-size: 1rem; padding: 0.875rem 1.5rem;">
+                        🚀 <?php esc_html_e('Generate LLMS.txt File', 'wp-llms-txt'); ?>
+                    </button>
+                </form>
             <?php endif; ?>
         </div>
     </div>
@@ -331,25 +367,44 @@ foreach ($notices as $notice) {
 
     <!-- Management Tab -->
     <div id="management-tab" class="llms-tab-panel">
-        <div class="llms-card">
-            <div class="llms-card-header">
-                <h2 class="llms-card-title">🛠️ Cache Management</h2>
-                <p class="llms-card-description">Clear caches and regenerate your LLMS.txt file</p>
+        <div class="llms-grid cols-2">
+            <div class="llms-card">
+                <div class="llms-card-header">
+                    <h2 class="llms-card-title">🚀 File Generation</h2>
+                    <p class="llms-card-description">Generate or regenerate your LLMS.txt file</p>
+                </div>
+                <div class="llms-card-content">
+                    <p><?php esc_html_e('Generate a fresh LLMS.txt file based on your current settings and content.', 'wp-llms-txt'); ?></p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="generate_llms_file">
+                        <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
+                        <button type="submit" class="llms-button primary">
+                            🔄 <?php esc_html_e('Generate LLMS.txt File', 'wp-llms-txt'); ?>
+                        </button>
+                    </form>
+                </div>
             </div>
-            <div class="llms-card-content">
-                <p><?php esc_html_e('This tool helps ensure your LLMS.txt file is properly reflected in your sitemap by:', 'wp-llms-txt'); ?></p>
-                <ul style="margin: 1rem 0; padding-left: 1.5rem;">
-                    <li><?php esc_html_e('Clearing sitemap caches', 'wp-llms-txt'); ?></li>
-                    <li><?php esc_html_e('Resetting WordPress rewrite rules', 'wp-llms-txt'); ?></li>
-                    <li><?php esc_html_e('Forcing sitemap regeneration', 'wp-llms-txt'); ?></li>
-                </ul>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="clear_caches">
-                    <?php wp_nonce_field('clear_caches', 'clear_caches_nonce'); ?>
-                    <button type="submit" class="llms-button primary">
-                        <?php esc_html_e('Clear Caches', 'wp-llms-txt'); ?>
-                    </button>
-                </form>
+            
+            <div class="llms-card">
+                <div class="llms-card-header">
+                    <h2 class="llms-card-title">🛠️ Advanced: Clear Caches</h2>
+                    <p class="llms-card-description">Clear system caches and force regeneration</p>
+                </div>
+                <div class="llms-card-content">
+                    <p><?php esc_html_e('Clear SEO plugin caches and reset rewrite rules. Use this if you have sitemap issues.', 'wp-llms-txt'); ?></p>
+                    <ul style="margin: 1rem 0; padding-left: 1.5rem; font-size: 0.875rem;">
+                        <li><?php esc_html_e('Clears sitemap caches', 'wp-llms-txt'); ?></li>
+                        <li><?php esc_html_e('Resets WordPress rewrite rules', 'wp-llms-txt'); ?></li>
+                        <li><?php esc_html_e('Forces sitemap regeneration', 'wp-llms-txt'); ?></li>
+                    </ul>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="clear_caches">
+                        <?php wp_nonce_field('clear_caches', 'clear_caches_nonce'); ?>
+                        <button type="submit" class="llms-button secondary">
+                            🧹 <?php esc_html_e('Clear All Caches', 'wp-llms-txt'); ?>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -532,6 +587,18 @@ jQuery(document).ready(function($) {
             alert('<?php esc_html_e('Please select at least one post type.', 'wp-llms-txt'); ?>');
             return false;
         }
+    });
+
+    // Handle dismissible notifications
+    $('.llms-alert-dismiss').on('click', function() {
+        $(this).closest('.llms-alert').fadeOut(300, function() {
+            $(this).remove();
+        });
+    });
+
+    // Auto-dismiss success notifications after 5 seconds
+    $('.llms-alert.success.dismissible').delay(5000).fadeOut(300, function() {
+        $(this).remove();
     });
 });
 </script>

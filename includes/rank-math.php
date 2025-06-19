@@ -10,7 +10,10 @@ require_once plugin_dir_path(__FILE__) . 'class-llms-provider.php';
  * Register the LLMS sitemap provider with Rank Math
  */
 add_filter('rank_math/sitemap/providers', function($providers) {
-    $providers['llms'] = new LLMS_Sitemap_Provider();
+    // Only add provider if RankMath is available and class exists
+    if (class_exists('LLMS_Sitemap_Provider')) {
+        $providers['llms'] = new LLMS_Sitemap_Provider();
+    }
     return $providers;
 });
 

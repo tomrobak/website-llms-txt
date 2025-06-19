@@ -31,10 +31,7 @@ class LLMS_Generator
         // Initialize content cleaner
         $this->content_cleaner = new LLMS_Content_Cleaner();
 
-        // Initialize WP_Filesystem
-        $this->init_filesystem();
-
-        // Move initial generation to init hook
+        // Initialize hooks
         add_action('init', array($this, 'init_generator'), 20);
 
         // Hook into post updates
@@ -185,10 +182,17 @@ class LLMS_Generator
 
     public function init_generator($force = false)
     {
+        // Initialize filesystem if not already done
+        if (empty($this->wp_filesystem)) {
+            $this->init_filesystem();
+        }
 
         $siteurl = get_option('siteurl');
         if($siteurl) {
-            $this->llms_name = parse_url($siteurl)['host'];
+            $parsed = parse_url($siteurl);
+            $this->llms_name = isset($parsed['host']) ? $parsed['host'] : 'localhost';
+        } else {
+            $this->llms_name = 'localhost';
         }
 
         if ($this->settings['update_frequency'] !== 'immediate') {
@@ -199,6 +203,53 @@ class LLMS_Generator
             wp_clear_scheduled_hook('llms_update_llms_file_cron');
             wp_schedule_single_event(time() + 30, 'llms_update_llms_file_cron');
         }
+    }
+
+    /**
+     * Get the actual file path where LLMS.txt is stored
+     * @return string
+     */
+    public function get_llms_file_path() {
+        $upload_dir = wp_upload_dir();
+        
+        // Initialize llms_name if not set
+        if (empty($this->llms_name)) {
+            $siteurl = get_option('siteurl');
+            if($siteurl) {
+                $parsed = parse_url($siteurl);
+                $this->llms_name = isset($parsed['host']) ? $parsed['host'] : 'localhost';
+            } else {
+                $this->llms_name = 'localhost';
+            }
+        }
+        
+        return $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
+    }
+    
+    /**
+     * Check if LLMS.txt file exists
+     * @return bool
+     */
+    public function file_exists() {
+        return file_exists($this->get_llms_file_path());
+    }
+    
+    /**
+     * Get file modification time
+     * @return int|false
+     */
+    public function get_file_mtime() {
+        $file_path = $this->get_llms_file_path();
+        return file_exists($file_path) ? filemtime($file_path) : false;
+    }
+    
+    /**
+     * Get file size
+     * @return int|false
+     */
+    public function get_file_size() {
+        $file_path = $this->get_llms_file_path();
+        return file_exists($file_path) ? filesize($file_path) : false;
     }
 
     private function write_log($content)
@@ -683,9 +734,9 @@ class LLMS_Generator
 
     private function get_site_meta_description()
     {
-        if (class_exists('WPSEO_Options')) {
+        if (class_exists('WPSEO_Options') && function_exists('YoastSEO')) {
             return YoastSEO()->meta->for_posts_page()->description;
-        } elseif (class_exists('RankMath')) {
+        } elseif (class_exists('RankMath') || class_exists('RankMath\RankMath')) {
             return get_option('rank_math_description');
         } else {
             $description = get_bloginfo('description');
@@ -709,9 +760,9 @@ class LLMS_Generator
 
     private function get_post_meta_description( $post )
     {
-        if (class_exists('WPSEO_Meta')) {
+        if (class_exists('WPSEO_Meta') && function_exists('YoastSEO')) {
             return YoastSEO()->meta->for_post($post->ID)->description;
-        } elseif (class_exists('RankMath')) {
+        } elseif (class_exists('RankMath') || class_exists('RankMath\RankMath')) {
             // Try using RankMath's helper class first
             if (class_exists('RankMath\Helper')) {
                 $desc = RankMath\Helper::get_post_meta('description', $post->ID);

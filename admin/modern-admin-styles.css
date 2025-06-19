@@ -102,28 +102,30 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   border-radius: var(--llms-radius);
   font-size: 0.875rem;
   font-weight: 500;
+  border: 1px solid;
+  margin-bottom: 1rem;
 }
 
 .llms-status.success {
   background: var(--llms-success-bg);
   color: var(--llms-success);
-  border: 1px solid var(--llms-success);
+  border-color: var(--llms-success);
 }
 
 .llms-status.warning {
   background: var(--llms-warning-bg);
   color: var(--llms-warning);
-  border: 1px solid var(--llms-warning);
+  border-color: var(--llms-warning);
 }
 
 .llms-status.error {
   background: var(--llms-error-bg);
   color: var(--llms-error);
-  border: 1px solid var(--llms-error);
+  border-color: var(--llms-error);
 }
 
 /* Modern form controls */
@@ -354,6 +356,35 @@
   border-radius: var(--llms-radius);
   margin-bottom: 1rem;
   border: 1px solid;
+  position: relative;
+}
+
+.llms-alert.dismissible {
+  padding-right: 2.5rem;
+}
+
+.llms-alert-dismiss {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in-out;
+  padding: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.llms-alert-dismiss:hover {
+  opacity: 1;
 }
 
 .llms-alert.success {
