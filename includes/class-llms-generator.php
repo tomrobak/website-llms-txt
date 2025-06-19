@@ -262,10 +262,23 @@ class LLMS_Generator
 
     public function generate_content()
     {
+        // Set initial progress
+        LLMS_Progress::set_progress('generate_content', 0, 4, __('Starting content generation...', 'wp-llms-txt'));
+        
         $this->updates_all_posts();
+        LLMS_Progress::set_progress('generate_content', 1, 4, __('Generating site info...', 'wp-llms-txt'));
+        
         $this->generate_site_info();
+        LLMS_Progress::set_progress('generate_content', 2, 4, __('Generating overview...', 'wp-llms-txt'));
+        
         $this->generate_overview();
+        LLMS_Progress::set_progress('generate_content', 3, 4, __('Generating detailed content...', 'wp-llms-txt'));
+        
         $this->generate_detailed_content();
+        LLMS_Progress::set_progress('generate_content', 4, 4, __('Content generation completed!', 'wp-llms-txt'));
+        
+        // Clear progress after completion
+        LLMS_Progress::clear_progress();
     }
 
     private function generate_site_info()

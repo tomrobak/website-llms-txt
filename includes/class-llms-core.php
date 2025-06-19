@@ -177,6 +177,25 @@ class LLMS_Core {
         $clean['include_meta'] = !empty($value['include_meta']);
         $clean['include_excerpts'] = !empty($value['include_excerpts']);
         $clean['include_taxonomies'] = !empty($value['include_taxonomies']);
+        $clean['include_custom_fields'] = !empty($value['include_custom_fields']);
+        $clean['exclude_private_taxonomies'] = !empty($value['exclude_private_taxonomies']);
+
+        // Sanitize selected taxonomies
+        $clean['selected_taxonomies'] = array();
+        if (isset($value['selected_taxonomies']) && is_array($value['selected_taxonomies'])) {
+            $valid_taxonomies = get_taxonomies(array('public' => true));
+            foreach ($value['selected_taxonomies'] as $tax) {
+                if (in_array($tax, $valid_taxonomies)) {
+                    $clean['selected_taxonomies'][] = sanitize_key($tax);
+                }
+            }
+        }
+        
+        // Sanitize custom field keys
+        if (isset($value['custom_field_keys'])) {
+            $keys = array_map('trim', explode(',', $value['custom_field_keys']));
+            $clean['custom_field_keys'] = implode(', ', array_filter(array_map('sanitize_key', $keys)));
+        }
 
         // Sanitize update frequency
         $clean['update_frequency'] = isset($value['update_frequency']) && 
@@ -212,6 +231,21 @@ class LLMS_Core {
         );
 
         wp_enqueue_script('llms-admin-script');
+        
+        // Enqueue progress script
+        wp_enqueue_script(
+            'llms-progress-script',
+            LLMS_PLUGIN_URL . 'admin/progress.js',
+            array('jquery'),
+            LLMS_VERSION,
+            true
+        );
+        
+        // Localize script with AJAX data
+        wp_localize_script('llms-progress-script', 'llmsProgress', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('llms_progress_nonce')
+        ));
     }
 
     public function activate() {

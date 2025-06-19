@@ -5,22 +5,64 @@ if (!defined('ABSPATH')) {
 
 $latest_post = apply_filters('get_llms_content', '');
 
-// Verify cache cleared nonce and display message
+// Display admin notices
+$notices = array();
+
+// Check for cache cleared
 if (isset($_GET['cache_cleared']) && $_GET['cache_cleared'] === 'true' && 
     isset($_GET['_wpnonce'])) {
     $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce']));
     if (wp_verify_nonce($nonce, 'llms_cache_cleared')) {
-        echo '<div class="notice notice-success"><p>' . esc_html__('Caches cleared successfully!', 'wp-llms-txt') . '</p></div>';
+        $notices[] = array(
+            'type' => 'success',
+            'message' => sprintf(
+                __('✅ Caches cleared successfully! Your LLMS.txt file has been regenerated. <a href="%s" target="_blank">View file →</a>', 'wp-llms-txt'),
+                esc_url(home_url('/llms.txt'))
+            ),
+            'dismissible' => true
+        );
     }
 }
 
-// Verify settings updated nonce and display message
+// Check for settings updated
 if (isset($_GET['settings-updated']) && 
     isset($_GET['_wpnonce'])) {
     $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce']));
     if (wp_verify_nonce($nonce, 'llms_options_update')) {
-        echo '<div class="notice notice-success"><p>' . esc_html__('Settings saved successfully!', 'wp-llms-txt') . '</p></div>';
+        $notices[] = array(
+            'type' => 'success',
+            'message' => __('✅ Settings saved successfully! The LLMS.txt file will be regenerated with your new settings.', 'wp-llms-txt'),
+            'dismissible' => true
+        );
     }
+}
+
+// Check for errors
+if (isset($_GET['error'])) {
+    $error_code = sanitize_text_field($_GET['error']);
+    $error_messages = array(
+        'no_post_types' => __('⚠️ Please select at least one post type to include in your LLMS.txt file.', 'wp-llms-txt'),
+        'generation_failed' => __('❌ Failed to generate LLMS.txt file. Please check file permissions and try again.', 'wp-llms-txt'),
+        'permission_denied' => __('❌ Permission denied. Please check your user capabilities.', 'wp-llms-txt')
+    );
+    
+    if (isset($error_messages[$error_code])) {
+        $notices[] = array(
+            'type' => 'error',
+            'message' => $error_messages[$error_code],
+            'dismissible' => true
+        );
+    }
+}
+
+// Display all notices
+foreach ($notices as $notice) {
+    printf(
+        '<div class="notice notice-%s %s"><p>%s</p></div>',
+        esc_attr($notice['type']),
+        $notice['dismissible'] ? 'is-dismissible' : '',
+        wp_kses_post($notice['message'])
+    );
 }
 ?>
 
@@ -28,19 +70,50 @@ if (isset($_GET['settings-updated']) &&
     <h1><?php esc_html_e('WP llms.txt', 'wp-llms-txt'); ?></h1>
 
     <div class="card">
-        <h2><?php esc_html_e('File Status', 'wp-llms-txt'); ?></h2>
-        <?php if ($latest_post): ?>
-            <p><?php esc_html_e('File is being auto-generated based on your settings.', 'wp-llms-txt'); ?></p>
-            <p><?php esc_html_e('View files:', 'wp-llms-txt'); ?></p>
-            <ul>
-                <li><a href="<?php echo esc_url(home_url('/llms.txt')); ?>" target="_blank"><?php echo esc_url(home_url('/llms.txt')); ?></a></li>
-                <?php if (class_exists('RankMath') || (defined('WPSEO_VERSION') && class_exists('WPSEO_Sitemaps'))): ?>
-                    <li><a href="<?php echo esc_url(home_url('/sitemap_index.xml')); ?>" target="_blank"><?php echo esc_url(home_url('/sitemap_index.xml')); ?></a></li>
-                    <li><a href="<?php echo esc_url(home_url('/llms-sitemap.xml')); ?>" target="_blank"><?php echo esc_url(home_url('/llms-sitemap.xml')); ?></a></li>
-                <?php endif; ?>
-            </ul>
+        <h2><?php esc_html_e('📊 File Status', 'wp-llms-txt'); ?></h2>
+        <?php 
+        $upload_dir = wp_upload_dir();
+        $file_path = $upload_dir['basedir'] . '/llms.txt';
+        $file_exists = file_exists($file_path);
+        $file_size = $file_exists ? filesize($file_path) : 0;
+        $file_modified = $file_exists ? filemtime($file_path) : 0;
+        ?>
+        
+        <?php if ($latest_post && $file_exists): ?>
+            <div style="background: #e7f7e7; border-left: 4px solid #46b450; padding: 12px; margin: 12px 0;">
+                <p style="margin: 0;"><strong>✅ <?php esc_html_e('LLMS.txt is active and working!', 'wp-llms-txt'); ?></strong></p>
+            </div>
+            
+            <table class="widefat" style="margin-top: 15px;">
+                <tbody>
+                    <tr>
+                        <td><strong><?php esc_html_e('File Size:', 'wp-llms-txt'); ?></strong></td>
+                        <td><?php echo esc_html(size_format($file_size)); ?></td>
+                    </tr>
+                    <tr>
+                        <td><strong><?php esc_html_e('Last Updated:', 'wp-llms-txt'); ?></strong></td>
+                        <td><?php echo esc_html(human_time_diff($file_modified, current_time('timestamp')) . ' ' . __('ago', 'wp-llms-txt')); ?></td>
+                    </tr>
+                    <tr>
+                        <td><strong><?php esc_html_e('Available URLs:', 'wp-llms-txt'); ?></strong></td>
+                        <td>
+                            <a href="<?php echo esc_url(home_url('/llms.txt')); ?>" target="_blank" class="button button-small">
+                                <?php esc_html_e('View LLMS.txt', 'wp-llms-txt'); ?> ↗
+                            </a>
+                            <?php if (class_exists('RankMath') || (defined('WPSEO_VERSION') && class_exists('WPSEO_Sitemaps'))): ?>
+                                <a href="<?php echo esc_url(home_url('/llms-sitemap.xml')); ?>" target="_blank" class="button button-small">
+                                    <?php esc_html_e('View Sitemap', 'wp-llms-txt'); ?> ↗
+                                </a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         <?php else: ?>
-            <p style="color: red;">✗ <?php esc_html_e('No LLMS.txt file found in root directory', 'wp-llms-txt'); ?></p>
+            <div style="background: #fcf0f1; border-left: 4px solid #d63638; padding: 12px; margin: 12px 0;">
+                <p style="margin: 0;"><strong>❌ <?php esc_html_e('LLMS.txt file not found', 'wp-llms-txt'); ?></strong></p>
+                <p style="margin: 5px 0 0 0; color: #666;"><?php esc_html_e('Click "Clear Caches" below to generate the file.', 'wp-llms-txt'); ?></p>
+            </div>
         <?php endif; ?>
     </div>
 
@@ -166,6 +239,70 @@ if (isset($_GET['settings-updated']) &&
                            <?php checked(!empty($settings['include_taxonomies'])); ?>>
                     <?php esc_html_e('Include taxonomies (categories, tags, etc.)', 'wp-llms-txt'); ?>
                 </label>
+            </p>
+            
+            <h3><?php esc_html_e('Advanced Options', 'wp-llms-txt'); ?></h3>
+            
+            <p>
+                <label>
+                    <input type="checkbox" 
+                           name="llms_generator_settings[include_custom_fields]" 
+                           value="1"
+                           <?php checked(!empty($settings['include_custom_fields'])); ?>>
+                    <?php esc_html_e('Include custom fields', 'wp-llms-txt'); ?>
+                </label>
+                <br>
+                <span class="description"><?php esc_html_e('Include publicly visible custom field data in the generated content.', 'wp-llms-txt'); ?></span>
+            </p>
+            
+            <p>
+                <label>
+                    <input type="checkbox" 
+                           name="llms_generator_settings[exclude_private_taxonomies]" 
+                           value="1"
+                           <?php checked(!empty($settings['exclude_private_taxonomies'])); ?>>
+                    <?php esc_html_e('Exclude private taxonomies', 'wp-llms-txt'); ?>
+                </label>
+                <br>
+                <span class="description"><?php esc_html_e('Hide taxonomies marked as private from the generated content.', 'wp-llms-txt'); ?></span>
+            </p>
+            
+            <div style="margin-top: 20px;">
+                <label>
+                    <strong><?php esc_html_e('Specific Taxonomies to Include:', 'wp-llms-txt'); ?></strong>
+                </label>
+                <div style="margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
+                    <?php
+                    $taxonomies = get_taxonomies(array('public' => true), 'objects');
+                    $selected_taxonomies = isset($settings['selected_taxonomies']) ? $settings['selected_taxonomies'] : array('category', 'post_tag');
+                    
+                    foreach ($taxonomies as $taxonomy) {
+                        if ($taxonomy->name === 'post_format') continue;
+                        ?>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="checkbox" 
+                                   name="llms_generator_settings[selected_taxonomies][]" 
+                                   value="<?php echo esc_attr($taxonomy->name); ?>"
+                                   <?php checked(in_array($taxonomy->name, $selected_taxonomies)); ?>>
+                            <?php echo esc_html($taxonomy->labels->name); ?>
+                            <span style="color: #666;">(<?php echo esc_html($taxonomy->name); ?>)</span>
+                        </label>
+                        <?php
+                    }
+                    ?>
+                </div>
+            </div>
+            
+            <p style="margin-top: 20px;">
+                <label>
+                    <?php esc_html_e('Custom fields to include (comma-separated):', 'wp-llms-txt'); ?>
+                    <input type="text" 
+                           name="llms_generator_settings[custom_field_keys]" 
+                           value="<?php echo esc_attr(isset($settings['custom_field_keys']) ? $settings['custom_field_keys'] : ''); ?>"
+                           style="width: 100%;"
+                           placeholder="field_key1, field_key2, field_key3">
+                </label>
+                <span class="description"><?php esc_html_e('Enter the meta keys of custom fields you want to include.', 'wp-llms-txt'); ?></span>
             </p>
 
             <h3><?php esc_html_e('Update Frequency', 'wp-llms-txt'); ?></h3>
