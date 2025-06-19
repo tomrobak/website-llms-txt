@@ -78,10 +78,41 @@ class LLMS_Generator
                 `meta` TEXT DEFAULT NULL,
                 `content` LONGTEXT DEFAULT NULL,
                 `published` DATETIME DEFAULT NULL,
-                `modified` DATETIME DEFAULT NULL
+                `modified` DATETIME DEFAULT NULL,
+                KEY idx_type_show_status (type, show, status),
+                KEY idx_published (published)
             ) $charset_collate;";
 
             dbDelta($sql);
+        } else {
+            // Add indexes to existing table if they don't exist
+            $this->llms_add_table_indexes();
+        }
+    }
+
+    /**
+     * Add performance indexes to existing table
+     * @since 1.1
+     */
+    private function llms_add_table_indexes() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'llms_txt_cache';
+        
+        // Check if indexes already exist
+        $indexes = $wpdb->get_results("SHOW INDEX FROM {$table}");
+        $existing_indexes = array();
+        foreach ($indexes as $index) {
+            $existing_indexes[] = $index->Key_name;
+        }
+        
+        // Add composite index for type, show, status if not exists
+        if (!in_array('idx_type_show_status', $existing_indexes)) {
+            $wpdb->query("ALTER TABLE {$table} ADD INDEX idx_type_show_status (type, show, status)");
+        }
+        
+        // Add index for published date if not exists
+        if (!in_array('idx_published', $existing_indexes)) {
+            $wpdb->query("ALTER TABLE {$table} ADD INDEX idx_published (published)");
         }
     }
 
@@ -162,9 +193,28 @@ class LLMS_Generator
     {
         $upload_dir = wp_upload_dir();
         $upload_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
-        if (file_exists($upload_path)) {
-            $content .= file_get_contents($upload_path);
+        
+        // Generate cache key based on file path
+        $cache_key = 'llms_txt_content_' . md5($upload_path);
+        
+        // Try to get cached content
+        $cached_content = get_transient($cache_key);
+        
+        if (false !== $cached_content) {
+            // Return cached content
+            return $content . $cached_content;
         }
+        
+        // File not in cache, read from disk
+        if (file_exists($upload_path)) {
+            $file_content = file_get_contents($upload_path);
+            if (false !== $file_content) {
+                // Cache for 1 hour
+                set_transient($cache_key, $file_content, HOUR_IN_SECONDS);
+                $content .= $file_content;
+            }
+        }
+        
         return $content;
     }
 
@@ -258,6 +308,11 @@ class LLMS_Generator
     private function generate_overview()
     {
         global $wpdb;
+        
+        // Suspend cache addition for performance
+        $suspend = wp_suspend_cache_addition();
+        wp_suspend_cache_addition(true);
+        
         if (defined('WP_CLI') && WP_CLI) {
             \WP_CLI::log('Start generate overview');
         }
@@ -318,11 +373,24 @@ class LLMS_Generator
                 \WP_CLI::log('End generate overview');
             }
         }
+        
+        // Restore cache addition
+        wp_suspend_cache_addition($suspend);
     }
 
     private function generate_detailed_content()
     {
         global $wpdb;
+
+        // Suspend cache addition for performance
+        $suspend = wp_suspend_cache_addition();
+        wp_suspend_cache_addition(true);
+        
+        // Increase memory limit if possible
+        $memory_limit = ini_get('memory_limit');
+        if (intval($memory_limit) < 256) {
+            @ini_set('memory_limit', '256M');
+        }
 
         if (defined('WP_CLI') && WP_CLI) {
             \WP_CLI::log('Start generate detailed content');
@@ -428,6 +496,9 @@ class LLMS_Generator
                 \WP_CLI::log('End generate detailed content');
             }
         }
+        
+        // Restore cache addition
+        wp_suspend_cache_addition($suspend);
     }
 
     public function remove_emojis($text) {
@@ -663,6 +734,9 @@ class LLMS_Generator
         $upload_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
         if (file_exists($upload_path)) {
             unlink($upload_path);
+            // Clear file content cache
+            $cache_key = 'llms_txt_content_' . md5($upload_path);
+            delete_transient($cache_key);
         }
 
         if(defined('FLYWHEEL_PLUGIN_DIR')) {
