@@ -34,7 +34,53 @@ jobs:
           mkdir -p build/wp-llms-txt
           
           # Copy plugin files excluding development files
-          rsync -av --exclude-from=.github/release-exclude.txt . build/wp-llms-txt/
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.DS_Store' \
+            --exclude='*.swp' \
+            --exclude='*.swo' \
+            --exclude='*~' \
+            --exclude='CLAUDE.md' \
+            --exclude='*.claude' \
+            --exclude='.claude' \
+            --exclude='claude.md' \
+            --exclude='claude-*' \
+            --exclude='cursor.md' \
+            --exclude='cursor-*' \
+            --exclude='fix.md' \
+            --exclude='notes.md' \
+            --exclude='dev.md' \
+            --exclude='development.md' \
+            --exclude='Archive.zip' \
+            --exclude='node_modules' \
+            --exclude='build' \
+            --exclude='dist' \
+            --exclude='release' \
+            --exclude='temp' \
+            --exclude='tmp' \
+            --exclude='*.tmp' \
+            --exclude='*.temp' \
+            --exclude='*.log' \
+            --exclude='logs' \
+            --exclude='debug.log' \
+            --exclude='error.log' \
+            --exclude='.idea' \
+            --exclude='*.sublime-*' \
+            --exclude='.atom' \
+            --exclude='.brackets.json' \
+            --exclude='.Spotlight-V100' \
+            --exclude='.Trashes' \
+            --exclude='ehthumbs.db' \
+            --exclude='Desktop.ini' \
+            --exclude='*.bak' \
+            --exclude='*.backup' \
+            --exclude='*.orig' \
+            --exclude='tests' \
+            --exclude='test' \
+            --exclude='phpunit.xml' \
+            --exclude='*.test.php' \
+            . build/wp-llms-txt/
           
           # Create the zip file
           cd build
