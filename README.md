@@ -3,7 +3,7 @@
 [![WordPress Plugin](https://img.shields.io/badge/WordPress-Plugin-blue.svg)](https://wordpress.org/)
 [![PHP Version](https://img.shields.io/badge/PHP-7.2%2B-purple.svg)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![GitHub Release](https://img.shields.io/github/v/release/your-username/wp-llms-txt)](https://github.com/your-username/wp-llms-txt/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/tomrobak/wp-llms-txt)](https://github.com/tomrobak/website-llms-txt/releases)
 
 *Because even AI needs a roadmap to find the good stuff on your website* 🗺️
 
@@ -15,9 +15,9 @@ Think of it as a "VIP list" for your website content, but for robots. The cool r
 
 ## 🚀 This Fork is Different (And Better!)
 
-This is a **supercharged fork** of the original "Website LLMs.txt" plugin, lovingly maintained by the original genius [Website LLMs.txt team](https://github.com/original-repo). We took their brilliant idea and... well, let's just say we gave it some serious upgrades:
+This is a **supercharged fork** of the original "Website LLMs.txt" plugin, lovingly maintained by the original genius [Website LLMs.txt team](https://github.com/RRyanHoward/website-llms-txt). I took their brilliant idea and... well, let's just say I gave it some serious upgrades:
 
-### ✨ What We Added (The Good Stuff):
+### ✨ What I Added (The Good Stuff):
 - **🛡️ Security Fort Knox**: Fixed security vulnerabilities that would make your hosting provider cry
 - **⚡ Speed Demon**: Performance optimizations that make it 75% faster (your server will thank you)
 - **🎨 Pretty Interface**: Real-time progress bars because waiting is so 2023
@@ -28,7 +28,7 @@ This is a **supercharged fork** of the original "Website LLMs.txt" plugin, lovin
 - **🧠 Smart Validation**: Forms that prevent you from breaking things (you're welcome)
 
 ### 💝 Credits Where Credits Are Due
-Massive props to the original [Website LLMs.txt team](https://github.com/original-repo) for creating this brilliant concept. We're just the ones who couldn't leave well enough alone and decided to add "a few small improvements" (narrator: it was not a few small improvements).
+Massive props to the original [Website LLMs.txt team](https://github.com/RRyanHoward/website-llms-txt) for creating this brilliant concept. I'm just the guy who couldn't leave well enough alone and decided to add "a few small improvements" (narrator: it was not a few small improvements).
 
 ## Why Your Website Needs This 🎯
 
@@ -46,7 +46,7 @@ Massive props to the original [Website LLMs.txt team](https://github.com/origina
 
 ## Installation (The Easy Way) 📥
 
-1. **Download** the latest release from our [releases page](https://github.com/your-username/wp-llms-txt/releases)
+1. **Download** the latest release from my [releases page](https://github.com/tomrobak/website-llms-txt/releases)
 2. **Upload** to your WordPress site (Plugins → Add New → Upload Plugin)
 3. **Activate** the plugin
 4. **Go to** Tools → Llms.txt in your WordPress admin
@@ -110,9 +110,10 @@ add_action('llms_txt_after_generate', function($file_path, $settings) {
 
 ## Support & Contributing 🤝
 
-- **Issues**: Found a bug? [Create an issue](https://github.com/your-username/wp-llms-txt/issues)
-- **Feature Requests**: Got ideas? We love ideas!
+- **Issues**: Found a bug? [Create an issue](https://github.com/tomrobak/website-llms-txt/issues)
+- **Feature Requests**: Got ideas? I love ideas!
 - **Pull Requests**: Code contributions welcome (tests required, sanity optional)
+- **Community**: Join [WPLove.co](https://wplove.co) - a passionate community of WordPress users, especially photographers and creatives. It's a niche community packed with knowledge and real-world WordPress wisdom!
 
 ## License 📄
 
@@ -124,4 +125,6 @@ This plugin has been battle-tested on sites with over 10,000 posts. Your AI over
 
 ---
 
-*Made with ❤️ (and lots of coffee) by developers who believe the future is AI-powered, but the present is still delightfully human.*
+*Made with ❤️ (and lots of coffee) by Tom Robak, who believes the future is AI-powered, but the present is still delightfully human.*
+
+**Want to connect?** Find me and other passionate WordPress users at [WPLove.co](https://wplove.co) - where photographers, creatives, and WordPress enthusiasts share knowledge and build amazing things together! 📸✨
