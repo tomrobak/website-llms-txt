@@ -1701,7 +1701,7 @@ class LLMS_Generator
         }
         
         // Also ensure logs and progress tables exist
-        $this->ensure_all_tables_exist()
+        $this->ensure_all_tables_exist();
         
         // Check if cache has any entries
         $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$table_cache}");
