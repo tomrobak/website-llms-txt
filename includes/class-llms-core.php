@@ -120,8 +120,8 @@ class LLMS_Core {
                 'sanitize_callback' => [$this, 'sanitize_settings'],
                 'default' => [
                     'post_types' => ['page', 'post'], // Only core post types as default
-                    'max_posts' => 100,
-                    'max_words' => 250,
+                    'max_posts' => 500, // Higher limit for comprehensive AI training
+                    'max_words' => 1000, // Better default for AI training
                     'include_meta' => true,
                     'include_excerpts' => true,
                     'include_taxonomies' => true,

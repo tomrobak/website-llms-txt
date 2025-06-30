@@ -23,8 +23,8 @@ class LLMS_Generator
         // Get settings with proper defaults
         $defaults = array(
             'post_types' => array('page', 'post'), // Only core post types as default
-            'max_posts' => 100,
-            'max_words' => 250,
+            'max_posts' => 500, // Higher limit for comprehensive AI training
+            'max_words' => 1000, // Better default for AI training
             'include_meta' => true,
             'include_excerpts' => true,
             'include_taxonomies' => true,
@@ -719,6 +719,8 @@ class LLMS_Generator
         // Allow developers to filter post types
         $post_types = apply_filters('llms_txt_post_types', $this->settings['post_types']);
         
+        $global_posts_processed = 0; // Global counter across all post types
+        
         foreach ($post_types as $post_type) {
             if ($post_type === 'llms_txt') continue;
 
@@ -794,14 +796,17 @@ class LLMS_Generator
                             break;
                         }
                         
-                        // Log progress
+                        // Log progress with global counter
+                        $global_posts_processed++;
                         if ($this->logger) {
-                            $this->logger->update_progress($posts_processed_for_type + 1, intval($data->post_id), $data->title);
+                            $this->logger->update_progress($global_posts_processed, intval($data->post_id), $data->title);
                             $this->logger->debug('Processing post', [
                                 'post_id' => $data->post_id,
                                 'title' => $data->title,
                                 'type' => $data->type,
-                                'content_length' => strlen($data->content)
+                                'content_length' => strlen($data->content),
+                                'global_count' => $global_posts_processed,
+                                'type_count' => $posts_processed_for_type + 1
                             ], intval($data->post_id));
                         }
 
@@ -896,7 +901,12 @@ class LLMS_Generator
                         // Add post title
                         $output .= "\n### " . esc_html($data->title) . "\n";
 
-                        $content = wp_trim_words($data->content, $this->settings['max_words'] ?? 250, '...');
+                        // Use a higher default if max_words is too low for AI training
+                        $max_words = $this->settings['max_words'] ?? 250;
+                        if ($max_words < 500) {
+                            $max_words = 1000; // Better default for AI training
+                        }
+                        $content = wp_trim_words($data->content, $max_words, '[content truncated due to word limit]');
                         
                         // Allow developers to filter the content
                         $content = apply_filters('llms_txt_content', $content, $data->post_id, $post_type);
