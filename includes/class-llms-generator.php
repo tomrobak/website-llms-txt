@@ -17,6 +17,7 @@ class LLMS_Generator
     private $batch_size = 100; // Smaller batches for better memory management
     private $memory_threshold = 134217728; // 128MB threshold
     private ?LLMS_Logger $logger = null;
+    private $current_file_type = 'standard'; // 'standard' or 'full'
 
     public function __construct()
     {
@@ -301,11 +302,13 @@ class LLMS_Generator
     
     /**
      * Get the actual file path where LLMS.txt is stored
+     * @param string $type 'standard' or 'full'
      * @return string
      */
-    public function get_llms_file_path() {
+    public function get_llms_file_path($type = 'standard') {
         // Use website root directory, not uploads folder
-        return ABSPATH . 'llms.txt';
+        $filename = ($type === 'full') ? 'llms-full.txt' : 'llms.txt';
+        return ABSPATH . $filename;
     }
     
     /**
@@ -381,8 +384,8 @@ class LLMS_Generator
 
         if ($this->wp_filesystem) {
             if (!$this->llms_path) {
-                // Use website root directory
-                $this->llms_path = ABSPATH . 'llms.txt';
+                // Use website root directory with correct filename
+                $this->llms_path = $this->get_llms_file_path($this->current_file_type);
             }
 
             // Check if we can write to the root directory
@@ -421,8 +424,8 @@ class LLMS_Generator
     public function get_llms_content($content)
     {
         try {
-            // Read from website root directory
-            $file_path = ABSPATH . 'llms.txt';
+            // Default to standard file for backward compatibility
+            $file_path = $this->get_llms_file_path('standard');
             
             // Generate cache key based on file path
             $cache_key = 'llms_txt_content_' . md5($file_path);
@@ -457,6 +460,54 @@ class LLMS_Generator
             
         } catch (Exception $e) {
             $this->log_error('Exception in get_llms_content: ' . $e->getMessage());
+            return $content;
+        }
+    }
+    
+    /**
+     * Get content from a specific file type
+     * @param string $content Existing content
+     * @param string $type 'standard' or 'full'
+     * @return string
+     */
+    public function get_llms_content_by_type($content, $type = 'standard')
+    {
+        try {
+            $file_path = $this->get_llms_file_path($type);
+            
+            // Generate cache key based on file path
+            $cache_key = 'llms_txt_content_' . md5($file_path);
+            
+            // Try to get cached content
+            $cached_content = get_transient($cache_key);
+            
+            if (false !== $cached_content) {
+                // Return cached content
+                return $content . $cached_content;
+            }
+            
+            // File not in cache, read from disk
+            if (file_exists($file_path)) {
+                // Check if file is readable
+                if (!is_readable($file_path)) {
+                    $this->log_error('File exists but is not readable: ' . $file_path);
+                    return $content;
+                }
+                
+                $file_content = @file_get_contents($file_path);
+                if (false !== $file_content) {
+                    // Cache for 1 hour
+                    set_transient($cache_key, $file_content, HOUR_IN_SECONDS);
+                    $content .= $file_content;
+                } else {
+                    $this->log_error('Failed to read file contents: ' . $file_path);
+                }
+            }
+            
+            return $content;
+            
+        } catch (Exception $e) {
+            $this->log_error('Exception in get_llms_content_by_type: ' . $e->getMessage());
             return $content;
         }
     }
@@ -517,11 +568,56 @@ class LLMS_Generator
         }
     }
 
+    /**
+     * Legacy method - redirect to generate both files
+     */
     public function generate_content()
     {
-        // Log start
+        $this->update_llms_file();
+    }
+    
+    /**
+     * Generate standard llms.txt according to llmstxt.org specification
+     */
+    private function generate_standard_content()
+    {
+        // Reset path for this file type
+        $this->llms_path = null;
+        
         if ($this->logger) {
-            $this->logger->info('Starting content generation');
+            $this->logger->info('Starting standard llms.txt generation');
+        }
+        
+        // Fire action before generation starts
+        do_action('llms_txt_before_generate', $this->settings);
+        
+        // Ensure cache is populated before generating
+        $this->ensure_cache_populated();
+        
+        // Generate standard format header
+        $this->generate_standard_header();
+        
+        // Generate standard sections
+        $this->generate_standard_sections();
+        
+        if ($this->logger) {
+            $this->logger->info('Standard llms.txt generation completed!');
+        }
+        
+        // Fire action after generation completes
+        do_action('llms_txt_after_generate', $this->get_llms_file_path('standard'), $this->settings);
+    }
+    
+    /**
+     * Generate comprehensive llms-full.txt with all content
+     */
+    private function generate_full_content()
+    {
+        // Reset path for this file type
+        $this->llms_path = null;
+        
+        if ($this->logger) {
+            $this->logger->info('Starting comprehensive llms-full.txt generation');
         }
         
         // Fire action before generation starts
@@ -548,11 +644,134 @@ class LLMS_Generator
         $this->generate_detailed_content();
         
         if ($this->logger) {
-            $this->logger->info('Content generation completed!');
+            $this->logger->info('Comprehensive llms-full.txt generation completed!');
         }
         
         // Fire action after generation completes
-        do_action('llms_txt_after_generate', $this->get_llms_file_path(), $this->settings);
+        do_action('llms_txt_after_generate', $this->get_llms_file_path('full'), $this->settings);
+    }
+    
+    /**
+     * Generate standard llms.txt header according to llmstxt.org
+     */
+    private function generate_standard_header()
+    {
+        $site_name = get_bloginfo('name');
+        $meta_description = $this->get_site_meta_description();
+        
+        // Start with UTF-8 BOM
+        $output = "\xEF\xBB\xBF";
+        
+        // H1 with site name (required)
+        $output .= "# " . $site_name . "\n\n";
+        
+        // Optional blockquote with description
+        if ($meta_description) {
+            $output .= "> " . $meta_description . "\n\n";
+        }
+        
+        // Add site context
+        $output .= "This is a WordPress-powered website focused on " . $this->get_site_focus() . ".\n\n";
+        
+        $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+    }
+    
+    /**
+     * Generate standard sections for llms.txt
+     */
+    private function generate_standard_sections()
+    {
+        global $wpdb;
+        $table_cache = $wpdb->prefix . 'llms_txt_cache';
+        
+        // Key Pages Section
+        $output = "## Key Pages\n\n";
+        
+        // Get important pages
+        $pages = $wpdb->get_results($wpdb->prepare(
+            "SELECT post_id, title, link, meta FROM $table_cache 
+             WHERE type = 'page' AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
+             ORDER BY published DESC LIMIT %d",
+            10
+        ));
+        
+        if (!empty($pages)) {
+            foreach ($pages as $page) {
+                $description = $page->meta ?: 'Page content';
+                $output .= "- [" . esc_html($page->title) . "](" . esc_url($page->link) . "): " . 
+                          wp_trim_words($description, 15) . "\n";
+            }
+            $output .= "\n";
+        }
+        
+        $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+        
+        // Recent Content Section
+        $output = "## Recent Content\n\n";
+        
+        // Get recent posts
+        $posts = $wpdb->get_results($wpdb->prepare(
+            "SELECT post_id, title, link, meta, type FROM $table_cache 
+             WHERE type IN ('post', 'product') AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
+             ORDER BY published DESC LIMIT %d",
+            20
+        ));
+        
+        if (!empty($posts)) {
+            foreach ($posts as $post) {
+                $description = $post->meta ?: 'Content';
+                $output .= "- [" . esc_html($post->title) . "](" . esc_url($post->link) . "): " . 
+                          wp_trim_words($description, 15) . "\n";
+            }
+            $output .= "\n";
+        }
+        
+        $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+        
+        // Categories/Topics Section
+        $output = "## Topics\n\n";
+        $categories = get_categories(['number' => 10, 'orderby' => 'count', 'order' => 'DESC']);
+        
+        if (!empty($categories)) {
+            foreach ($categories as $cat) {
+                $output .= "- **" . esc_html($cat->name) . "** (" . $cat->count . " posts)\n";
+            }
+            $output .= "\n";
+        }
+        
+        $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+        
+        // Optional Section
+        $output = "## Optional\n\n";
+        $output .= "For comprehensive content including full post text, see `/llms-full.txt`\n";
+        $output .= "Generated on: " . date('Y-m-d H:i:s') . "\n";
+        
+        $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+    }
+    
+    /**
+     * Helper to determine site focus from content
+     */
+    private function get_site_focus()
+    {
+        // Check if it's a WooCommerce site
+        if (class_exists('WooCommerce')) {
+            return "e-commerce and online shopping";
+        }
+        
+        // Check for specific post types
+        $post_types = $this->settings['post_types'];
+        if (in_array('portfolio', $post_types)) {
+            return "portfolio and creative work";
+        }
+        
+        // Default based on site tagline
+        $tagline = get_bloginfo('description');
+        if ($tagline) {
+            return strtolower($tagline);
+        }
+        
+        return "content and information sharing";
     }
 
     private function generate_site_info()
@@ -1282,30 +1501,58 @@ class LLMS_Generator
             $progress_id = 'file_generation_' . time();
         }
         
-        // Start progress tracking
+        // Start progress tracking only once
         $total_posts = $this->count_total_posts();
         $this->logger->start_progress($progress_id, $total_posts);
-        $this->logger->info('Starting LLMS.txt file generation', [
+        $this->logger->info('Starting LLMS files generation', [
             'total_posts' => $total_posts,
             'post_types' => $this->settings['post_types']
         ]);
+        
+        // Generate standard llms.txt first
+        $this->generate_llms_file('standard');
+        
+        // Then generate comprehensive llms-full.txt
+        $this->generate_llms_file('full');
+        
+        // Complete progress tracking
+        $this->logger->info('LLMS files generation completed successfully');
+        $this->logger->complete_progress('completed');
+        
+        // Clear the progress ID transient
+        delete_transient('llms_current_progress_id');
+    }
+    
+    /**
+     * Generate a specific version of the LLMS file
+     * @param string $type 'standard' or 'full'
+     */
+    private function generate_llms_file($type = 'standard')
+    {
+        $this->current_file_type = $type;
+        
+        if ($this->logger) {
+            $this->logger->info("Generating {$type} LLMS file");
+        }
         
         if (defined('WP_CLI') && WP_CLI) {
             \WP_CLI::log('Start');
         }
 
         // Clean up old file locations first (migration from old versions)
-        $upload_dir = wp_upload_dir();
-        if (!isset($upload_dir['error']) || !$upload_dir['error']) {
-            $old_upload_path = $upload_dir['basedir'] . '/llms.txt';
-            if (file_exists($old_upload_path)) {
-                @unlink($old_upload_path);
-                $this->log_error('Removed old llms.txt from uploads directory');
+        if ($type === 'standard') {
+            $upload_dir = wp_upload_dir();
+            if (!isset($upload_dir['error']) || !$upload_dir['error']) {
+                $old_upload_path = $upload_dir['basedir'] . '/llms.txt';
+                if (file_exists($old_upload_path)) {
+                    @unlink($old_upload_path);
+                    $this->log_error('Removed old llms.txt from uploads directory');
+                }
             }
         }
         
-        // Delete the file from root directory
-        $file_path = ABSPATH . 'llms.txt';
+        // Delete the current file type from root directory
+        $file_path = $this->get_llms_file_path($type);
         if (file_exists($file_path)) {
             if (!@unlink($file_path)) {
                 $this->log_error('Failed to delete file: ' . $file_path);
@@ -1316,24 +1563,12 @@ class LLMS_Generator
             }
         }
 
-        // Flywheel hosting uses a different structure
-        if(defined('FLYWHEEL_PLUGIN_DIR')) {
-            $flywheel_path = dirname(ABSPATH) . '/www/llms.txt';
-            if (file_exists($flywheel_path)) {
-                if (!@unlink($flywheel_path)) {
-                    $this->log_error('Failed to delete Flywheel file: ' . $flywheel_path);
-                }
-            }
+        // Generate content based on type
+        if ($type === 'standard') {
+            $this->generate_standard_content();
         } else {
-            $file_path = ABSPATH . 'llms.txt';
-            if (file_exists($file_path)) {
-                if (!@unlink($file_path)) {
-                    $this->log_error('Failed to delete root file: ' . $file_path);
-                }
-            }
+            $this->generate_full_content();
         }
-
-        $this->generate_content();
 
         if (defined('WP_CLI') && WP_CLI) {
             \WP_CLI::log('End generate_content event');
@@ -1368,13 +1603,6 @@ class LLMS_Generator
         }
 
         do_action('llms_clear_seo_caches');
-        
-        // Complete progress tracking
-        $this->logger->info('LLMS.txt file generation completed successfully');
-        $this->logger->complete_progress('completed');
-        
-        // Clear the progress ID transient
-        delete_transient('llms_current_progress_id');
     }
 
     public function schedule_updates()

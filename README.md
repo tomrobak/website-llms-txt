@@ -1,12 +1,14 @@
 # WP LLMs.txt Plugin
 
-**Version: 2.3.0** | **Last Updated: 2025-06-30**
+**Version: 2.4.0** | **Last Updated: 2025-06-30**
 
 A WordPress plugin that generates LLMS.txt files for AI/LLM content consumption with SEO plugin integration. Originally created by Website LLM, forked and maintained by Tom Robak.
 
 ## 🚀 Features
 
 ### Core Functionality
+- **Dual-file generation** - Both standard llms.txt and comprehensive llms-full.txt
+- **llmstxt.org compliance** - Standard format follows the official specification
 - **Automated LLMS.txt generation** from WordPress content
 - **SEO plugin integration** with Yoast SEO and RankMath sitemaps
 - **Flexible content selection** - Choose post types, taxonomies, and custom fields
@@ -97,7 +99,8 @@ Join our passionate community of WordPress users, photographers, and creatives:
 ## 🔧 Technical Details
 
 ### Generated Files
-- **Primary**: `/wp-content/uploads/llms.txt` - Main AI training file
+- **Standard**: `/llms.txt` - Standard format following llmstxt.org specification
+- **Comprehensive**: `/llms-full.txt` - Full content for advanced AI training
 - **Sitemap**: `/llms-sitemap.xml` - SEO integration endpoint
 - **Cache**: Database-stored content cache for performance
 

@@ -130,10 +130,18 @@ if (isset($_GET['error'])) {
 
 // File status data using correct generator methods
 $generator = new LLMS_Generator();
+
+// Standard file
 $file_exists = $generator->file_exists();
 $file_size = $generator->get_file_size();
 $file_modified = $generator->get_file_mtime();
 $file_path = $generator->get_llms_file_path();
+
+// Full file
+$full_file_path = $generator->get_llms_file_path('full');
+$full_file_exists = file_exists($full_file_path);
+$full_file_size = $full_file_exists ? filesize($full_file_path) : 0;
+$full_file_modified = $full_file_exists ? filemtime($full_file_path) : false;
 
 // Get settings with proper defaults
 $default_settings = array(
@@ -178,28 +186,61 @@ foreach ($notices as $notice) {
     <div class="llms-card">
         <div class="llms-card-header">
             <h2 class="llms-card-title">📊 File Status & Quick Actions</h2>
-            <p class="llms-card-description">Current status of your LLMS.txt file and generation controls</p>
+            <p class="llms-card-description">Current status of your LLMS.txt files and generation controls</p>
         </div>
         <div class="llms-card-content">
-            <?php if ($file_exists): ?>
+            <?php if ($file_exists || $full_file_exists): ?>
                 <div class="llms-status success">
                     <span>✅</span>
-                    <span><?php esc_html_e('LLMS.txt file is active and working!', 'wp-llms-txt'); ?></span>
+                    <span><?php esc_html_e('LLMS files are active and working!', 'wp-llms-txt'); ?></span>
                 </div>
                 
-                <div class="llms-grid cols-3" style="margin-top: 1.5rem;">
-                    <div>
-                        <div class="llms-text-sm llms-text-muted">File Location</div>
-                        <div class="llms-font-semibold llms-text-xs" style="word-break: break-all;"><?php echo esc_html(basename($file_path)); ?></div>
-                    </div>
-                    <div>
-                        <div class="llms-text-sm llms-text-muted">File Size</div>
-                        <div class="llms-font-semibold"><?php echo esc_html(size_format($file_size)); ?></div>
-                    </div>
-                    <div>
-                        <div class="llms-text-sm llms-text-muted">Last Updated</div>
-                        <div class="llms-font-semibold"><?php echo esc_html(human_time_diff($file_modified, current_time('timestamp')) . ' ' . __('ago', 'wp-llms-txt')); ?></div>
-                    </div>
+                <!-- Standard llms.txt -->
+                <div style="margin-top: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">📄 Standard llms.txt</h4>
+                    <p class="llms-text-sm llms-text-muted" style="margin: 0 0 0.5rem 0;">Follows the llmstxt.org specification for AI crawlers</p>
+                    <?php if ($file_exists): ?>
+                        <div class="llms-grid cols-3">
+                            <div>
+                                <div class="llms-text-sm llms-text-muted">File Location</div>
+                                <div class="llms-font-semibold llms-text-xs" style="word-break: break-all;"><?php echo esc_html(basename($file_path)); ?></div>
+                            </div>
+                            <div>
+                                <div class="llms-text-sm llms-text-muted">File Size</div>
+                                <div class="llms-font-semibold"><?php echo esc_html(size_format($file_size)); ?></div>
+                            </div>
+                            <div>
+                                <div class="llms-text-sm llms-text-muted">Last Updated</div>
+                                <div class="llms-font-semibold"><?php echo esc_html(human_time_diff($file_modified, current_time('timestamp')) . ' ' . __('ago', 'wp-llms-txt')); ?></div>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <p class="llms-text-sm" style="color: #dc2626;">⚠️ <?php esc_html_e('Standard file not yet generated', 'wp-llms-txt'); ?></p>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Full llms-full.txt -->
+                <div style="margin-top: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">📚 Comprehensive llms-full.txt</h4>
+                    <p class="llms-text-sm llms-text-muted" style="margin: 0 0 0.5rem 0;">Contains full content for advanced AI training</p>
+                    <?php if ($full_file_exists): ?>
+                        <div class="llms-grid cols-3">
+                            <div>
+                                <div class="llms-text-sm llms-text-muted">File Location</div>
+                                <div class="llms-font-semibold llms-text-xs" style="word-break: break-all;"><?php echo esc_html(basename($full_file_path)); ?></div>
+                            </div>
+                            <div>
+                                <div class="llms-text-sm llms-text-muted">File Size</div>
+                                <div class="llms-font-semibold"><?php echo esc_html(size_format($full_file_size)); ?></div>
+                            </div>
+                            <div>
+                                <div class="llms-text-sm llms-text-muted">Last Updated</div>
+                                <div class="llms-font-semibold"><?php echo esc_html(human_time_diff($full_file_modified, current_time('timestamp')) . ' ' . __('ago', 'wp-llms-txt')); ?></div>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <p class="llms-text-sm" style="color: #dc2626;">⚠️ <?php esc_html_e('Comprehensive file not yet generated', 'wp-llms-txt'); ?></p>
+                    <?php endif; ?>
                 </div>
                 
                 <div class="llms-flex gap-2" style="margin-top: 1.5rem; align-items: center; flex-wrap: wrap;">
@@ -211,7 +252,10 @@ foreach ($notices as $notice) {
                         </button>
                     </form>
                     <a href="<?php echo esc_url(home_url('/llms.txt')); ?>" target="_blank" class="llms-button secondary">
-                        👁️ <?php esc_html_e('View File', 'wp-llms-txt'); ?>
+                        👁️ <?php esc_html_e('View Standard', 'wp-llms-txt'); ?>
+                    </a>
+                    <a href="<?php echo esc_url(home_url('/llms-full.txt')); ?>" target="_blank" class="llms-button secondary">
+                        📚 <?php esc_html_e('View Full', 'wp-llms-txt'); ?>
                     </a>
                     <?php if (class_exists('RankMath') || (defined('WPSEO_VERSION') && class_exists('WPSEO_Sitemaps'))): ?>
                         <a href="<?php echo esc_url(home_url('/llms-sitemap.xml')); ?>" target="_blank" class="llms-button secondary">
@@ -222,17 +266,17 @@ foreach ($notices as $notice) {
             <?php else: ?>
                 <div class="llms-status warning">
                     <span>⚠️</span>
-                    <span><?php esc_html_e('LLMS.txt file not found - ready to generate!', 'wp-llms-txt'); ?></span>
+                    <span><?php esc_html_e('LLMS files not found - ready to generate!', 'wp-llms-txt'); ?></span>
                 </div>
                 <p class="llms-text-sm llms-text-muted llms-mt-1 llms-mb-2">
-                    <?php esc_html_e('Click the button below to generate your LLMS.txt file and make your site AI-discoverable.', 'wp-llms-txt'); ?>
+                    <?php esc_html_e('Click the button below to generate your LLMS files and make your site AI-discoverable.', 'wp-llms-txt'); ?>
                 </p>
                 
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display: inline;">
                     <input type="hidden" name="action" value="generate_llms_file">
                     <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
                     <button type="submit" class="llms-button primary" style="font-size: 1rem; padding: 0.875rem 1.5rem;">
-                        🚀 <?php esc_html_e('Generate LLMS.txt File', 'wp-llms-txt'); ?>
+                        🚀 <?php esc_html_e('Generate LLMS Files', 'wp-llms-txt'); ?>
                     </button>
                 </form>
             <?php endif; ?>
@@ -405,15 +449,19 @@ foreach ($notices as $notice) {
             <div class="llms-card">
                 <div class="llms-card-header">
                     <h2 class="llms-card-title">🚀 File Generation</h2>
-                    <p class="llms-card-description">Generate or regenerate your LLMS.txt file</p>
+                    <p class="llms-card-description">Generate or regenerate your LLMS files</p>
                 </div>
                 <div class="llms-card-content">
-                    <p><?php esc_html_e('Generate a fresh LLMS.txt file based on your current settings and content.', 'wp-llms-txt'); ?></p>
+                    <p><?php esc_html_e('Generate both LLMS files based on your current settings and content:', 'wp-llms-txt'); ?></p>
+                    <ul style="margin: 1rem 0; padding-left: 1.5rem; font-size: 0.875rem;">
+                        <li><strong>llms.txt</strong> - <?php esc_html_e('Standard format following llmstxt.org specification', 'wp-llms-txt'); ?></li>
+                        <li><strong>llms-full.txt</strong> - <?php esc_html_e('Comprehensive format with full content', 'wp-llms-txt'); ?></li>
+                    </ul>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="generate_llms_file">
                         <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
                         <button type="submit" class="llms-button primary">
-                            🔄 <?php esc_html_e('Generate LLMS.txt File', 'wp-llms-txt'); ?>
+                            🔄 <?php esc_html_e('Generate LLMS Files', 'wp-llms-txt'); ?>
                         </button>
                     </form>
                 </div>

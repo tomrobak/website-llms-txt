@@ -58,6 +58,7 @@ class LLMS_Core {
 
     public function wp_head(): void {
         echo '<link rel="llms-sitemap" href="' . esc_url( home_url( '/llms.txt' ) ) . '" />' . "\n";
+        echo '<link rel="llms-sitemap-full" href="' . esc_url( home_url( '/llms-full.txt' ) ) . '" />' . "\n";
     }
 
     public function get_llms_post(): ?WP_Post {
@@ -338,10 +339,15 @@ class LLMS_Core {
             @unlink($old_path);
         }
         
-        // Delete from root location
-        $file_path = ABSPATH . 'llms.txt';
-        if (file_exists($file_path)) {
-            @unlink($file_path);
+        // Delete both files from root location
+        $standard_path = ABSPATH . 'llms.txt';
+        if (file_exists($standard_path)) {
+            @unlink($standard_path);
+        }
+        
+        $full_path = ABSPATH . 'llms-full.txt';
+        if (file_exists($full_path)) {
+            @unlink($full_path);
         }
 
         wp_clear_scheduled_hook('llms_update_llms_file_cron');
@@ -478,11 +484,13 @@ class LLMS_Core {
 
         if($wp_rewrite) {
             $wp_rewrite->add_rule('llms.txt', 'index.php?llms_txt=1', 'top');
+            $wp_rewrite->add_rule('llms-full.txt', 'index.php?llms_txt_full=1', 'top');
         }
     }
 
     public function add_query_vars(array $vars): array {
         $vars[] = 'llms_txt';
+        $vars[] = 'llms_txt_full';
         return $vars;
     }
 
@@ -494,6 +502,17 @@ class LLMS_Core {
                 header('Cache-Control: public, max-age=300'); // Cache for 5 minutes
                 // Don't escape HTML - this is a text file with intended formatting
                 echo $latest_post;
+                exit;
+            }
+        } elseif (get_query_var('llms_txt_full')) {
+            // Get the generator instance
+            $generator = new LLMS_Generator();
+            $content = $generator->get_llms_content_by_type('', 'full');
+            if ($content) {
+                header('Content-Type: text/plain; charset=utf-8');
+                header('Cache-Control: public, max-age=300'); // Cache for 5 minutes
+                // Don't escape HTML - this is a text file with intended formatting
+                echo $content;
                 exit;
             }
         }
@@ -592,10 +611,15 @@ class LLMS_Core {
         $new_settings = $this->sanitize_settings($import_data['settings']);
         update_option('llms_generator_settings', $new_settings);
         
-        // Clear cache after import
-        $file_path = ABSPATH . 'llms.txt';
-        if (file_exists($file_path)) {
-            @unlink($file_path);
+        // Clear both files after import
+        $standard_path = ABSPATH . 'llms.txt';
+        if (file_exists($standard_path)) {
+            @unlink($standard_path);
+        }
+        
+        $full_path = ABSPATH . 'llms-full.txt';
+        if (file_exists($full_path)) {
+            @unlink($full_path);
         }
         
         // Schedule regeneration
