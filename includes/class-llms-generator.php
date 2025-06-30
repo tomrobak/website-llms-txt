@@ -20,8 +20,9 @@ class LLMS_Generator
 
     public function __construct()
     {
-        $this->settings = get_option('llms_generator_settings', array(
-            'post_types' => array('page', 'post', 'wedding_lounge'),
+        // Get settings with proper defaults
+        $defaults = array(
+            'post_types' => array('page', 'post'), // Only core post types as default
             'max_posts' => 100,
             'max_words' => 250,
             'include_meta' => true,
@@ -29,7 +30,12 @@ class LLMS_Generator
             'include_taxonomies' => true,
             'update_frequency' => 'immediate',
             'need_check_option' => true,
-        ));
+        );
+        
+        $this->settings = get_option('llms_generator_settings', $defaults);
+        
+        // Ensure settings have all required keys
+        $this->settings = wp_parse_args($this->settings, $defaults);
 
         // Initialize content cleaner
         $this->content_cleaner = new LLMS_Content_Cleaner();
@@ -472,6 +478,14 @@ class LLMS_Generator
             // Debug: Check if table exists and has data
             $count_in_cache = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table_cache} WHERE type = %s", $post_type));
             $this->log_error("Posts in cache for {$post_type}: {$count_in_cache}");
+            
+            // Debug: Check actual posts in WordPress
+            $count_in_wp = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'", $post_type));
+            $this->log_error("Posts in WordPress for {$post_type}: {$count_in_wp}");
+            
+            // Debug: Check visibility status
+            $count_visible = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table_cache} WHERE type = %s AND (is_visible = 1 OR is_visible IS NULL)", $post_type));
+            $this->log_error("Visible posts in cache for {$post_type}: {$count_visible}");
 
             $offset = 0;
             do {

@@ -135,15 +135,20 @@ $file_size = $generator->get_file_size();
 $file_modified = $generator->get_file_mtime();
 $file_path = $generator->get_llms_file_path();
 
-// Get settings
-$settings = get_option('llms_generator_settings', array(
-    'post_types' => array('page', 'documentation', 'post'),
+// Get settings with proper defaults
+$default_settings = array(
+    'post_types' => array('page', 'post'), // Only core post types as default
     'max_posts' => 100,
+    'max_words' => 250,
     'include_meta' => true,
     'include_excerpts' => true,
     'include_taxonomies' => true,
     'update_frequency' => 'immediate'
-));
+);
+
+$settings = get_option('llms_generator_settings', $default_settings);
+// Ensure all keys exist
+$settings = wp_parse_args($settings, $default_settings);
 
 // Enqueue modern styles
 wp_enqueue_style('llms-modern-admin', plugins_url('admin/modern-admin-styles.css', dirname(__FILE__)), array(), LLMS_VERSION);
@@ -283,6 +288,7 @@ foreach ($notices as $notice) {
                                            <?php checked($is_checked); ?>>
                                     <label for="post_type_<?php echo esc_attr($post_type->name); ?>">
                                         <?php echo esc_html($post_type->labels->name); ?>
+                                        <small style="color: #999; font-size: 11px;">(<?php echo esc_html($post_type->name); ?>)</small>
                                     </label>
                                 </div>
                                 <?php
@@ -309,7 +315,7 @@ foreach ($notices as $notice) {
                                    id="max-words"
                                    class="llms-input"
                                    name="llms_generator_settings[max_words]"
-                                   value="<?php echo esc_attr($settings['max_words'] ?? 250); ?>"
+                                   value="<?php echo esc_attr($settings['max_words']); ?>"
                                    min="1"
                                    max="100000">
                         </div>

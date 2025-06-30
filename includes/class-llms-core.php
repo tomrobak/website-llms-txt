@@ -119,7 +119,7 @@ class LLMS_Core {
                 'type' => 'array',
                 'sanitize_callback' => [$this, 'sanitize_settings'],
                 'default' => [
-                    'post_types' => ['page', 'documentation', 'post'],
+                    'post_types' => ['page', 'post'], // Only core post types as default
                     'max_posts' => 100,
                     'max_words' => 250,
                     'include_meta' => true,

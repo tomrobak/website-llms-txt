@@ -325,8 +325,8 @@ class LLMS_Logger {
             if (is_array($logs)) {
                 foreach ($logs as $log) {
                     $formatted_log = $log;
-                    $formatted_log['memory_formatted'] = !empty($log['memory_usage']) ? size_format($log['memory_usage']) : 'N/A';
-                    $formatted_log['time_formatted'] = !empty($log['execution_time']) ? number_format($log['execution_time'], 2) . 's' : 'N/A';
+                    $formatted_log['memory_formatted'] = !empty($log['memory_usage']) ? size_format(intval($log['memory_usage'])) : 'N/A';
+                    $formatted_log['time_formatted'] = !empty($log['execution_time']) ? number_format(floatval($log['execution_time']), 2) . 's' : 'N/A';
                     if (!empty($log['context'])) {
                         $formatted_log['context'] = json_decode($log['context'], true);
                     }

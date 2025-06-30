@@ -4,13 +4,28 @@ Tags: ai, llms, seo, sitemap, artificial-intelligence, chatgpt, claude, llm, mac
 Requires at least: 6.7
 Tested up to: 6.7
 Requires PHP: 8.3
-Stable tag: 2.1.8
+Stable tag: 2.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Automatically generate llms.txt files for AI systems like ChatGPT, Claude & Perplexity. A supercharged fork with security fixes, performance boosts & WooCommerce support.
 
 == Changelog ==
+
+= 2.2.0 =
+* BREAKING: Removed all hardcoded custom post types from defaults
+* Fixed: Plugin now properly uses saved settings without hardcoded fallbacks
+* Fixed: Default post types now only include 'page' and 'post'
+* Fixed: Removed hardcoded 'wedding_lounge' and 'documentation' post types
+* Improved: Settings now properly merge with defaults using wp_parse_args
+* Improved: All custom post types must be explicitly selected by user
+
+= 2.1.9 =
+* Fixed: Fatal error in logs endpoint - number_format() type mismatch
+* Fixed: Better type casting for numeric values in logs
+* Added: More debug information for cache population
+* Added: Display post type machine names in settings for clarity
+* Improved: Debug logging for custom post types cache issues
 
 = 2.1.8 =
 * Fixed: Missing null check after get_post() that could cause fatal error
