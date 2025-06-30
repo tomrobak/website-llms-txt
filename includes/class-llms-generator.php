@@ -75,7 +75,7 @@ class LLMS_Generator
 
             $charset_collate = $wpdb->get_charset_collate();
             $sql = "CREATE TABLE $table (
-                `post_id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+                `post_id` BIGINT UNSIGNED NOT NULL,
                 `is_visible` TINYINT NULL DEFAULT NULL,
                 `status` VARCHAR(20) DEFAULT NULL,
                 `type` VARCHAR(20) DEFAULT NULL,
@@ -92,6 +92,7 @@ class LLMS_Generator
                 `content` LONGTEXT DEFAULT NULL,
                 `published` DATETIME DEFAULT NULL,
                 `modified` DATETIME DEFAULT NULL,
+                PRIMARY KEY (post_id),
                 KEY idx_type_visible_status (type, is_visible, status),
                 KEY idx_published (published),
                 KEY idx_stock_status (stock_status),

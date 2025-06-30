@@ -89,7 +89,7 @@ function llms_activate(): void {
     $charset_collate = $wpdb->get_charset_collate();
     
     $sql = "CREATE TABLE $table (
-        `post_id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+        `post_id` BIGINT UNSIGNED NOT NULL,
         `is_visible` TINYINT NULL DEFAULT NULL,
         `status` VARCHAR(20) DEFAULT NULL,
         `type` VARCHAR(20) DEFAULT NULL,
@@ -106,6 +106,7 @@ function llms_activate(): void {
         `content` LONGTEXT DEFAULT NULL,
         `published` DATETIME DEFAULT NULL,
         `modified` DATETIME DEFAULT NULL,
+        PRIMARY KEY (post_id),
         KEY idx_type_visible_status (type, is_visible, status),
         KEY idx_published (published),
         KEY idx_stock_status (stock_status),
@@ -117,14 +118,15 @@ function llms_activate(): void {
     // Create logs table
     $logs_table = $wpdb->prefix . 'llms_txt_logs';
     $sql_logs = "CREATE TABLE $logs_table (
-        `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        `timestamp` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `timestamp` DATETIME DEFAULT NULL,
         `level` VARCHAR(10) DEFAULT 'INFO',
         `message` TEXT,
         `context` TEXT,
         `post_id` BIGINT UNSIGNED DEFAULT NULL,
         `memory_usage` BIGINT DEFAULT NULL,
         `execution_time` FLOAT DEFAULT NULL,
+        PRIMARY KEY (id),
         KEY idx_timestamp (timestamp),
         KEY idx_level (level),
         KEY idx_post_id (post_id)
@@ -135,17 +137,18 @@ function llms_activate(): void {
     // Create progress table
     $progress_table = $wpdb->prefix . 'llms_txt_progress';
     $sql_progress = "CREATE TABLE $progress_table (
-        `id` VARCHAR(50) NOT NULL PRIMARY KEY,
+        `id` VARCHAR(50) NOT NULL,
         `status` VARCHAR(20) DEFAULT 'running',
         `current_item` INT DEFAULT 0,
         `total_items` INT DEFAULT 0,
         `current_post_id` BIGINT UNSIGNED DEFAULT NULL,
         `current_post_title` TEXT,
-        `started_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `started_at` DATETIME DEFAULT NULL,
+        `updated_at` DATETIME DEFAULT NULL,
         `memory_peak` BIGINT DEFAULT 0,
         `errors` INT DEFAULT 0,
-        `warnings` INT DEFAULT 0
+        `warnings` INT DEFAULT 0,
+        PRIMARY KEY (id)
     ) $charset_collate;";
     
     dbDelta($sql_progress);
