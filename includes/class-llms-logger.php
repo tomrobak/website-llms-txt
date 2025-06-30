@@ -298,9 +298,9 @@ class LLMS_Logger {
         
         // Format logs
         foreach ($logs as &$log) {
-            $log['memory_formatted'] = size_format($log['memory_usage']);
-            $log['time_formatted'] = number_format($log['execution_time'], 2) . 's';
-            if ($log['context']) {
+            $log['memory_formatted'] = !empty($log['memory_usage']) ? size_format($log['memory_usage']) : 'N/A';
+            $log['time_formatted'] = !empty($log['execution_time']) ? number_format($log['execution_time'], 2) . 's' : 'N/A';
+            if (!empty($log['context'])) {
                 $log['context'] = json_decode($log['context'], true);
             }
         }

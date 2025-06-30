@@ -446,32 +446,40 @@ class LLMS_Generator
 
     public function generate_content()
     {
-        // Set initial progress
-        LLMS_Progress::set_progress('generate_content', 0, 4, __('Starting content generation...', 'wp-llms-txt'));
+        // Log start
+        if ($this->logger) {
+            $this->logger->info('Starting content generation');
+        }
         
         // Fire action before generation starts
         do_action('llms_txt_before_generate', $this->settings);
         
         $this->updates_all_posts();
-        LLMS_Progress::set_progress('generate_content', 1, 4, __('Generating site info...', 'wp-llms-txt'));
         
         // Ensure cache is populated before generating
         $this->ensure_cache_populated();
         
+        if ($this->logger) {
+            $this->logger->info('Generating site info...');
+        }
         $this->generate_site_info();
-        LLMS_Progress::set_progress('generate_content', 2, 4, __('Generating overview...', 'wp-llms-txt'));
         
+        if ($this->logger) {
+            $this->logger->info('Generating overview...');
+        }
         $this->generate_overview();
-        LLMS_Progress::set_progress('generate_content', 3, 4, __('Generating detailed content...', 'wp-llms-txt'));
         
+        if ($this->logger) {
+            $this->logger->info('Generating detailed content...');
+        }
         $this->generate_detailed_content();
-        LLMS_Progress::set_progress('generate_content', 4, 4, __('Content generation completed!', 'wp-llms-txt'));
+        
+        if ($this->logger) {
+            $this->logger->info('Content generation completed!');
+        }
         
         // Fire action after generation completes
         do_action('llms_txt_after_generate', $this->get_llms_file_path(), $this->settings);
-        
-        // Clear progress after completion
-        LLMS_Progress::clear_progress();
     }
 
     private function generate_site_info()
@@ -541,7 +549,7 @@ class LLMS_Generator
             $exit = false;
 
             do {
-                $conditions = " WHERE `type` = %s AND `is_visible`=1 AND `status`='publish' ";
+                $conditions = " WHERE `type` = %s AND (`is_visible`=1 OR `is_visible` IS NULL) AND `status`='publish' ";
                 $params = [
                     $post_type,
                     $this->limit,
@@ -650,7 +658,7 @@ class LLMS_Generator
             $i = 0;
 
             do {
-                $conditions = " WHERE `type` = %s AND `is_visible`=1 AND `status`='publish' ";
+                $conditions = " WHERE `type` = %s AND (`is_visible`=1 OR `is_visible` IS NULL) AND `status`='publish' ";
                 $params = [
                     $post_type,
                     $this->limit,
@@ -662,8 +670,14 @@ class LLMS_Generator
                 // Debug logging
                 if (empty($posts)) {
                     $this->log_error("No posts found for type: {$post_type}, offset: {$offset}");
+                    if ($this->logger) {
+                        $this->logger->warning("No posts found for type: {$post_type}, offset: {$offset}");
+                    }
                 } else {
                     $this->log_error("Found " . count($posts) . " posts for type: {$post_type}, offset: {$offset}");
+                    if ($this->logger) {
+                        $this->logger->info("Found " . count($posts) . " posts for type: {$post_type}, offset: {$offset}");
+                    }
                 }
                 
                 $output = '';
@@ -680,13 +694,15 @@ class LLMS_Generator
                         }
                         
                         // Log progress
-                        $this->logger->update_progress($i + 1, intval($data->post_id), $data->title);
-                        $this->logger->debug('Processing post', [
-                            'post_id' => $data->post_id,
-                            'title' => $data->title,
-                            'type' => $data->type,
-                            'content_length' => strlen($data->content)
-                        ], intval($data->post_id));
+                        if ($this->logger) {
+                            $this->logger->update_progress($i + 1, intval($data->post_id), $data->title);
+                            $this->logger->debug('Processing post', [
+                                'post_id' => $data->post_id,
+                                'title' => $data->title,
+                                'type' => $data->type,
+                                'content_length' => strlen($data->content)
+                            ], intval($data->post_id));
+                        }
 
                         if ($this->settings['include_meta']) {
                             if ($data->meta) {
