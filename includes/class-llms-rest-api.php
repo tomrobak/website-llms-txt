@@ -163,10 +163,26 @@ class LLMS_REST_API {
      * Start generation process
      */
     public function start_generation(WP_REST_Request $request): WP_REST_Response {
-        // Get progress ID from transient
+        // Get progress ID from transient or create one
         $progress_id = get_transient('llms_current_progress_id');
         if (!$progress_id) {
-            return new WP_REST_Response(['error' => 'No generation pending'], 400);
+            // Create new progress ID if none exists
+            $progress_id = 'api_generation_' . time();
+            set_transient('llms_current_progress_id', $progress_id, HOUR_IN_SECONDS);
+            
+            // Create initial progress entry in database
+            global $wpdb;
+            $wpdb->insert(
+                $wpdb->prefix . 'llms_txt_progress',
+                [
+                    'id' => $progress_id,
+                    'status' => 'pending',
+                    'current_item' => 0,
+                    'total_items' => 100, // Will be updated when generation starts
+                    'started_at' => current_time('mysql'),
+                    'updated_at' => current_time('mysql')
+                ]
+            );
         }
         
         // Check if already running
@@ -177,7 +193,7 @@ class LLMS_REST_API {
         ));
         
         if ($status === 'running') {
-            return new WP_REST_Response(['error' => 'Generation already running'], 409);
+            return new WP_REST_Response(['error' => 'Generation already running', 'progress_id' => $progress_id], 409);
         }
         
         // Get generator instance
@@ -196,7 +212,8 @@ class LLMS_REST_API {
             ], 200);
         } catch (Exception $e) {
             return new WP_REST_Response([
-                'error' => 'Generation failed: ' . $e->getMessage()
+                'error' => 'Generation failed: ' . $e->getMessage(),
+                'progress_id' => $progress_id
             ], 500);
         }
     }

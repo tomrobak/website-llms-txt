@@ -621,7 +621,7 @@ class LLMS_Generator
             }
 
             $offset = 0;
-            $i = 0;
+            $posts_processed_for_type = 0; // Counter per post type
             $exit = false;
 
             do {
@@ -652,7 +652,7 @@ class LLMS_Generator
                     $this->log_error("Max posts for {$post_type}: {$max_posts}");
                     
                     foreach ($posts as $data) {
-                        if($max_posts > 0 && $i >= $max_posts) {
+                        if($max_posts > 0 && $posts_processed_for_type >= $max_posts) {
                             $exit = true;
                             break;
                         }
@@ -661,7 +661,7 @@ class LLMS_Generator
                             // Allow developers to filter overview content
                             $overview = apply_filters('llms_txt_overview_content', $data->overview, $data->post_id, $post_type);
                             $output .= $overview;
-                            $i++;
+                            $posts_processed_for_type++;
                         }
 
                         unset($data);
@@ -731,7 +731,7 @@ class LLMS_Generator
 
             $offset = 0;
             $exit = false;
-            $i = 0;
+            $posts_processed_for_type = 0; // Counter per post type
 
             do {
                 // Check memory before processing batch
@@ -773,14 +773,14 @@ class LLMS_Generator
                     
                     foreach ($posts as $data) {
                         if (!$data->content) continue;
-                        if ($max_posts > 0 && $i >= $max_posts) {
+                        if ($max_posts > 0 && $posts_processed_for_type >= $max_posts) {
                             $exit = true;
                             break;
                         }
                         
                         // Log progress
                         if ($this->logger) {
-                            $this->logger->update_progress($i + 1, intval($data->post_id), $data->title);
+                            $this->logger->update_progress($posts_processed_for_type + 1, intval($data->post_id), $data->title);
                             $this->logger->debug('Processing post', [
                                 'post_id' => $data->post_id,
                                 'title' => $data->title,
@@ -898,7 +898,7 @@ class LLMS_Generator
                         $output .= "---\n\n";
                         unset($data);
 
-                        $i++;
+                        $posts_processed_for_type++;
                     }
                 }
 
