@@ -473,12 +473,12 @@ foreach ($notices as $notice) {
                 global $wpdb;
                 $table_cache = $wpdb->prefix . 'llms_txt_cache';
                 $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$table_cache}");
-                $stale_count = $wpdb->get_var($wpdb->prepare(
+                $stale_count = $wpdb->get_var(
                     "SELECT COUNT(*) FROM {$table_cache} c 
                      LEFT JOIN {$wpdb->posts} p ON c.post_id = p.ID 
                      WHERE p.post_modified > c.modified 
                      AND p.post_status = 'publish'"
-                ));
+                );
                 
                 if ($cache_count !== null) {
                     echo '<div class="llms-stats" style="margin-top: 1.5rem; padding: 1rem; background: #f1f5f9; border-radius: 0.5rem;">';

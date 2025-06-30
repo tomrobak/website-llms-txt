@@ -13,8 +13,9 @@ Automatically generate llms.txt files for AI systems like ChatGPT, Claude & Perp
 == Changelog ==
 
 = 2.1.6 =
-* Fixed: Critical wpdb::prepare() usage error with dynamic placeholders
-* Fixed: PHP Notice about incorrect wpdb::prepare() usage
+* Fixed: Critical wpdb::prepare() usage error with dynamic placeholders in cache warming
+* Fixed: PHP Notice about incorrect wpdb::prepare() usage without placeholders in admin page
+* Fixed: Removed unnecessary wpdb::prepare() call for queries without parameters
 * Improved: Safer database query construction for post type filtering
 
 = 2.1.5 =
