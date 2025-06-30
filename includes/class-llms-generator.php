@@ -1645,16 +1645,30 @@ class LLMS_Generator
         }
         
         // Find stale cache entries
-        $stale_posts = $wpdb->get_results($wpdb->prepare(
-            "SELECT c.post_id, p.post_type 
-             FROM {$table_cache} c 
-             LEFT JOIN {$wpdb->posts} p ON c.post_id = p.ID 
-             WHERE p.post_modified > c.modified 
-             AND p.post_status = 'publish'
-             AND p.post_type IN (" . implode(',', array_fill(0, count($this->settings['post_types']), '%s')) . ")
-             LIMIT %d",
+        // Build post types for IN clause safely
+        $post_types_placeholders = array_fill(0, count($this->settings['post_types']), '%s');
+        $post_types_in = implode(',', $post_types_placeholders);
+        
+        // Build query without prepare for dynamic parts
+        $query = "SELECT c.post_id, p.post_type 
+                 FROM {$table_cache} c 
+                 LEFT JOIN {$wpdb->posts} p ON c.post_id = p.ID 
+                 WHERE p.post_modified > c.modified 
+                 AND p.post_status = 'publish'";
+        
+        if (!empty($this->settings['post_types'])) {
+            $query .= " AND p.post_type IN (" . $post_types_in . ")";
+        }
+        
+        $query .= " LIMIT %d";
+        
+        // Prepare with all values
+        $prepared_query = $wpdb->prepare(
+            $query,
             array_merge($this->settings['post_types'], [100])
-        ));
+        );
+        
+        $stale_posts = $wpdb->get_results($prepared_query);
         
         foreach ($stale_posts as $stale_post) {
             // Check memory usage
