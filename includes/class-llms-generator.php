@@ -623,6 +623,14 @@ class LLMS_Generator
                 ];
 
                 $posts = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
+                
+                // Debug logging
+                if (empty($posts)) {
+                    $this->log_error("No posts found for type: {$post_type}, offset: {$offset}");
+                } else {
+                    $this->log_error("Found " . count($posts) . " posts for type: {$post_type}, offset: {$offset}");
+                }
+                
                 $output = '';
                 if (!empty($posts)) {
                     
@@ -681,6 +689,9 @@ class LLMS_Generator
                                 }
                             }
                         }
+
+                        // Add post title
+                        $output .= "\n### " . esc_html($data->title) . "\n";
 
                         $content = wp_trim_words($data->content, $this->settings['max_words'] ?? 250, '...');
                         
@@ -943,6 +954,17 @@ class LLMS_Generator
         
         // Process content directly without ob_start() to prevent memory leaks
         $raw_content = get_the_content(null, false, $post);
+        
+        // If get_the_content returns empty, try getting post_content directly
+        if (empty($raw_content) && !empty($post->post_content)) {
+            $raw_content = $post->post_content;
+        }
+        
+        // Debug logging
+        if (empty($raw_content)) {
+            $this->log_error("Empty content for post ID: {$post_id}, Title: {$post->post_title}");
+        }
+        
         $processed_content = do_shortcode($raw_content);
         $content = $this->content_cleaner->clean($this->remove_emojis($this->remove_shortcodes($processed_content)));
 

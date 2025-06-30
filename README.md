@@ -1,12 +1,18 @@
 # WP LLMs.txt Plugin
 
-**Last Updated: 2025-06-19 21:44:40**
+**Version: 2.0.1** | **Last Updated: 2025-06-30**
 
 A WordPress plugin that generates LLMS.txt files for AI/LLM content consumption with SEO plugin integration. Originally created by Website LLM, forked and maintained by Tom Robak.
 
 ## ✨ Recent Updates
 
-### Major UI/UX Redesign (2025-06-19)
+### Critical Bug Fixes (2025-06-30 - v2.0.1)
+- **Fixed Fatal Error** - Resolved TypeError in update checker when WordPress passes false
+- **Fixed Content Generation** - Corrected empty llms.txt file generation issue
+- **Improved Content Extraction** - Added fallback for empty content scenarios
+- **Enhanced Debugging** - Better error logging for troubleshooting
+
+### Major UI/UX Redesign (2025-06-19 - v2.0.0)
 - **Modern shadcn-inspired interface** - Complete redesign with professional, clean UI components
 - **Fixed duplicate checkboxes** - Resolved HTML/CSS conflicts causing non-functional form elements  
 - **Removed drag & drop** - Simplified file upload with standard, reliable input method
@@ -40,8 +46,8 @@ A WordPress plugin that generates LLMS.txt files for AI/LLM content consumption 
 
 ## 📋 Requirements
 
-- **WordPress**: 5.8 or higher
-- **PHP**: 7.2 or higher
+- **WordPress**: 6.7 or higher
+- **PHP**: 8.3 or higher
 - **Memory**: 128MB minimum (256MB recommended)
 - **Permissions**: Write access to wp-content/uploads directory
 
@@ -50,7 +56,7 @@ A WordPress plugin that generates LLMS.txt files for AI/LLM content consumption 
 1. Download the plugin zip file
 2. Upload via WordPress Admin → Plugins → Add New → Upload Plugin
 3. Activate the plugin
-4. Configure settings in **Settings → WP LLMs.txt**
+4. Configure settings in **Tools → llms.txt**
 5. Click "Clear Caches" to generate your first LLMS.txt file
 
 ## ⚙️ Configuration

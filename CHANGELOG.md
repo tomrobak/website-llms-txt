@@ -5,6 +5,26 @@ All notable changes to WP LLMs.txt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-06-30
+
+### 🐛 Critical Bug Fixes
+
+This patch release fixes critical issues that prevented content generation and caused fatal errors.
+
+### Fixed
+
+- **Fatal Error**: Fixed TypeError in `LLMS_Updater::update_available()` when WordPress passes `false` instead of object
+- **Content Generation**: Fixed empty llms.txt file generation due to undefined variable in content output
+- **Content Processing**: Fixed content extraction fallback when `get_the_content()` returns empty
+- **Debug Logging**: Added comprehensive debugging for content generation issues
+- **Post Titles**: Added missing post titles to detailed content section
+
+### Improved
+
+- **Error Handling**: Better handling of edge cases in update checking
+- **Content Extraction**: More robust content retrieval with fallback to `post_content`
+- **Debug Information**: Enhanced logging for troubleshooting empty content issues
+
 ## [2.0.0] - 2025-06-19
 
 ### 🚀 The "PHP 8.3+ Modernization & GitHub Automation" Edition

@@ -130,7 +130,12 @@ class LLMS_Updater {
     /**
      * Check if update is available
      */
-    public function update_available(object $transient): object {
+    public function update_available($transient) {
+        // Handle cases where WordPress passes false instead of an object
+        if (!is_object($transient)) {
+            $transient = new stdClass();
+        }
+        
         if (empty($transient->checked)) {
             return $transient;
         }
