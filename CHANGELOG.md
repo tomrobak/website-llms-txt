@@ -5,6 +5,31 @@ All notable changes to WP LLMs.txt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2025-06-30
+
+### 🐛 Critical Bug Fixes
+
+This patch fixes critical issues preventing the plugin from working properly.
+
+### Fixed
+
+- **REST API Registration**: Fixed 404 errors on REST endpoints by adjusting init priority
+- **Empty Cache Issue**: Added automatic cache population when cache is empty
+- **Post Detection**: Fixed issue where no posts were found even when they exist
+- **Custom Post Types**: Added support for custom post types in default settings
+
+### Added
+
+- **Cache Population Check**: Automatically populates cache before generation
+- **Better Error Logging**: Added null checks for logger instance
+- **Cache Status Info**: Shows cache count in logs
+
+### Improved
+
+- **Initialization Order**: REST API now registers earlier with priority 0
+- **Cache Management**: More robust cache population mechanism
+- **Error Prevention**: Added safety checks for logger availability
+
 ## [2.1.0] - 2025-06-30
 
 ### 🚀 Major Architecture Fixes

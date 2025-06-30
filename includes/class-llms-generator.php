@@ -19,7 +19,7 @@ class LLMS_Generator
     public function __construct()
     {
         $this->settings = get_option('llms_generator_settings', array(
-            'post_types' => array('page', 'documentation', 'post'),
+            'post_types' => array('page', 'post', 'wedding_lounge'),
             'max_posts' => 100,
             'max_words' => 250,
             'include_meta' => true,
@@ -68,6 +68,9 @@ class LLMS_Generator
         ));
 
         if ($table_exists !== $table) {
+            if ($this->logger) {
+                $this->logger->info('Creating cache table');
+            }
             require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
             $charset_collate = $wpdb->get_charset_collate();
@@ -450,6 +453,9 @@ class LLMS_Generator
         
         $this->updates_all_posts();
         LLMS_Progress::set_progress('generate_content', 1, 4, __('Generating site info...', 'wp-llms-txt'));
+        
+        // Ensure cache is populated before generating
+        $this->ensure_cache_populated();
         
         $this->generate_site_info();
         LLMS_Progress::set_progress('generate_content', 2, 4, __('Generating overview...', 'wp-llms-txt'));
@@ -1204,6 +1210,68 @@ class LLMS_Generator
         
         // Schedule cache population
         wp_schedule_single_event(time() + 5, 'llms_populate_cache');
+    }
+    
+    /**
+     * Check if cache needs to be populated
+     */
+    private function ensure_cache_populated(): void
+    {
+        global $wpdb;
+        
+        $table_cache = $wpdb->prefix . 'llms_txt_cache';
+        
+        // Check if cache has any entries
+        $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$table_cache}");
+        
+        if ($cache_count == 0) {
+            $this->logger->info('Cache is empty, populating with existing posts');
+            $this->populate_entire_cache();
+        } else {
+            $this->logger->info("Cache contains {$cache_count} posts");
+        }
+    }
+    
+    /**
+     * Populate entire cache with all posts
+     */
+    private function populate_entire_cache(): void
+    {
+        global $wpdb;
+        
+        foreach ($this->settings['post_types'] as $post_type) {
+            if ($post_type === 'llms_txt') continue;
+            
+            $this->logger->info("Populating cache for post type: {$post_type}");
+            
+            // Get all published posts of this type
+            $args = array(
+                'post_type' => $post_type,
+                'post_status' => 'publish',
+                'posts_per_page' => -1,
+                'fields' => 'ids'
+            );
+            
+            $query = new WP_Query($args);
+            $total = count($query->posts);
+            
+            $this->logger->info("Found {$total} {$post_type} posts to cache");
+            
+            $processed = 0;
+            foreach ($query->posts as $post_id) {
+                $post = get_post($post_id);
+                if ($post) {
+                    $this->handle_post_update($post_id, $post, false, 'populate');
+                    $processed++;
+                    
+                    if ($processed % 10 == 0) {
+                        $this->logger->info("Cached {$processed}/{$total} {$post_type} posts");
+                    }
+                }
+            }
+            
+            wp_reset_postdata();
+        }
     }
     
     /**
