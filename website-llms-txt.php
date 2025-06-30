@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP LLMs.txt
  * Description: Manages and automatically generates LLMS.txt files for LLM/AI consumption and integrates with SEO plugins (Yoast SEO, RankMath). Originally created by Website LLM (https://www.websitellm.com) - forked and modified by Tom Robak.
- * Version: 2.0.2
+ * Version: 2.1.0
  * Author: Tom Robak
  * Author URI: https://wplove.co
  * Text Domain: wp-llms-txt
@@ -46,7 +46,7 @@ if (version_compare(get_bloginfo('version'), '6.7', '<')) {
 }
 
 // Define plugin constants
-define('LLMS_VERSION', '2.0.2');
+define('LLMS_VERSION', '2.1.0');
 define('LLMS_PLUGIN_FILE', __FILE__);
 define('LLMS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('LLMS_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -74,3 +74,52 @@ function llms_init(): void {
 
 // Hook the initialization function
 add_action('init', 'llms_init');
+
+/**
+ * Activation hook - create database tables
+ */
+function llms_activate(): void {
+    global $wpdb;
+    
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    
+    $table = $wpdb->prefix . 'llms_txt_cache';
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $sql = "CREATE TABLE $table (
+        `post_id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+        `is_visible` TINYINT NULL DEFAULT NULL,
+        `status` VARCHAR(20) DEFAULT NULL,
+        `type` VARCHAR(20) DEFAULT NULL,
+        `title` TEXT DEFAULT NULL,
+        `link` VARCHAR(255) DEFAULT NULL,
+        `sku` VARCHAR(255) DEFAULT NULL,
+        `price` VARCHAR(125) DEFAULT NULL,
+        `stock_status` VARCHAR(50) DEFAULT NULL,
+        `stock_quantity` INT DEFAULT NULL,
+        `product_type` VARCHAR(50) DEFAULT NULL,
+        `excerpts` TEXT DEFAULT NULL,
+        `overview` TEXT DEFAULT NULL,
+        `meta` TEXT DEFAULT NULL,
+        `content` LONGTEXT DEFAULT NULL,
+        `published` DATETIME DEFAULT NULL,
+        `modified` DATETIME DEFAULT NULL,
+        KEY idx_type_visible_status (type, is_visible, status),
+        KEY idx_published (published),
+        KEY idx_stock_status (stock_status),
+        KEY idx_product_type (product_type)
+    ) $charset_collate;";
+    
+    dbDelta($sql);
+    
+    // Also ensure rewrite rules are flushed
+    flush_rewrite_rules();
+    
+    // Set a flag that activation has run
+    update_option('llms_activation_run', true);
+    
+    // Schedule initial cache population
+    wp_schedule_single_event(time() + 10, 'llms_populate_cache');
+}
+
+register_activation_hook(__FILE__, 'llms_activate');

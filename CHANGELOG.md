@@ -5,6 +5,32 @@ All notable changes to WP LLMs.txt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-06-30
+
+### 🚀 Major Architecture Fixes
+
+This release addresses critical architectural issues that were causing empty llms.txt file generation.
+
+### Fixed
+
+- **Table Creation Timing**: Moved database table creation to plugin activation hook instead of init
+- **File Writing Logic**: Fixed FILE_APPEND issue - now properly overwrites on first write
+- **Cache Population**: Added mechanism to populate cache for existing posts
+- **Hook Timing**: Ensured table exists before any cache operations
+
+### Added
+
+- **Cache Population Button**: Manual cache population from admin interface
+- **Cache Statistics**: Display cache count in admin panel
+- **Activation Hook**: Proper table creation on plugin activation
+- **Cache Management**: New methods for populating and managing cache
+
+### Improved
+
+- **Error Handling**: Better error messages for table creation failures
+- **Memory Management**: Batch processing for cache population
+- **Admin UI**: Added cache management section to Management tab
+
 ## [2.0.2] - 2025-06-30
 
 ### 🐛 Additional Bug Fixes

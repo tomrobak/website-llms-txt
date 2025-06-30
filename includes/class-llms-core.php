@@ -19,9 +19,6 @@ class LLMS_Core {
 
     public function __construct()
     {
-        // Register activation hook
-        register_activation_hook(LLMS_PLUGIN_FILE, [$this, 'activate']);
-
         // Initialize core functionality
         add_action('init', [$this, 'init'], 0);
 
@@ -33,6 +30,7 @@ class LLMS_Core {
         add_action('admin_post_clear_caches', [$this, 'handle_cache_clearing']);
         add_action('admin_post_clear_error_log', [$this, 'handle_clear_error_log']);
         add_action('admin_post_generate_llms_file', [$this, 'handle_generate_file']);
+        add_action('admin_post_populate_llms_cache', [$this, 'handle_populate_cache']);
         
         // Handle import/export
         add_action('admin_post_llms_export_settings', [$this, 'handle_export_settings']);
@@ -270,9 +268,6 @@ class LLMS_Core {
         ));
     }
 
-    public function activate(): void {
-        flush_rewrite_rules();
-    }
 
     public function add_admin_menu(): void {
         add_submenu_page(
@@ -338,6 +333,25 @@ class LLMS_Core {
             'page' => 'llms-file-manager',
             'error_log_cleared' => 'true',
             '_wpnonce' => wp_create_nonce('llms_error_log_cleared')
+        ), admin_url('admin.php')));
+        exit;
+    }
+    
+    public function handle_populate_cache(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        check_admin_referer('populate_llms_cache', 'populate_llms_cache_nonce');
+        
+        // Schedule cache population
+        wp_schedule_single_event(time() + 2, 'llms_populate_cache');
+        
+        // Redirect back with success message
+        wp_safe_redirect(add_query_arg(array(
+            'page' => 'llms-file-manager',
+            'cache_populated' => 'true',
+            '_wpnonce' => wp_create_nonce('llms_cache_populated')
         ), admin_url('admin.php')));
         exit;
     }

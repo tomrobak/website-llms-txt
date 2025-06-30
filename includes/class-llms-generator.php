@@ -33,6 +33,12 @@ class LLMS_Generator
 
         // Initialize hooks
         add_action('init', array($this, 'init_generator'), 20);
+        
+        // Hook into settings update to populate cache
+        add_action('update_option_llms_generator_settings', array($this, 'populate_cache_on_settings_change'), 10, 2);
+        
+        // Hook for cache population
+        add_action('llms_populate_cache', array($this, 'populate_cache_for_existing_posts'));
 
         // Hook into post updates
         add_action('save_post', array($this, 'handle_post_update'), 10, 3);
@@ -316,8 +322,14 @@ class LLMS_Generator
                 }
             }
 
-            // Attempt to write file
-            $result = file_put_contents($this->llms_path, (string)$content, FILE_APPEND | LOCK_EX);
+            // Check if this is the first write (file doesn't exist or we're writing the header)
+            if (!file_exists($this->llms_path) || strpos((string)$content, '# LLMs.txt') !== false) {
+                // First write - overwrite the file
+                $result = file_put_contents($this->llms_path, (string)$content, LOCK_EX);
+            } else {
+                // Subsequent writes - append to the file
+                $result = file_put_contents($this->llms_path, (string)$content, FILE_APPEND | LOCK_EX);
+            }
             
             if ($result === false) {
                 $this->log_error('Failed to write to file: ' . $this->llms_path);
@@ -840,7 +852,7 @@ class LLMS_Generator
      * @param $update
      * @return void
      */
-    public function handle_post_update($post_id, $post, $update)
+    public function handle_post_update($post_id, $post, $update, $mode = 'normal')
     {
         global $wpdb;
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
@@ -1021,7 +1033,7 @@ class LLMS_Generator
             ]
         );
 
-        if ($this->settings['update_frequency'] === 'immediate' && $update !== 'manual') {
+        if ($this->settings['update_frequency'] === 'immediate' && $update !== 'manual' && $mode !== 'populate') {
             wp_clear_scheduled_hook('llms_update_llms_file_cron');
             wp_schedule_single_event(time() + 30, 'llms_update_llms_file_cron');
         }
@@ -1144,5 +1156,71 @@ class LLMS_Generator
             $interval = ($this->settings['update_frequency'] === 'daily') ? 'daily' : 'weekly';
             wp_schedule_event(time(), $interval, 'llms_scheduled_update');
         }
+    }
+    
+    /**
+     * Populate cache when settings change
+     */
+    public function populate_cache_on_settings_change($old_value, $new_value)
+    {
+        // Update settings
+        $this->settings = $new_value;
+        
+        // Schedule cache population
+        wp_schedule_single_event(time() + 5, 'llms_populate_cache');
+    }
+    
+    /**
+     * Populate cache for all existing posts
+     */
+    public function populate_cache_for_existing_posts()
+    {
+        global $wpdb;
+        
+        $table_cache = $wpdb->prefix . 'llms_txt_cache';
+        
+        // Check if table exists
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SHOW TABLES LIKE %s",
+            $table_cache
+        ));
+        
+        if ($table_exists !== $table_cache) {
+            $this->log_error('Cache table does not exist when trying to populate');
+            return;
+        }
+        
+        foreach ($this->settings['post_types'] as $post_type) {
+            if ($post_type === 'llms_txt') continue;
+            
+            $args = array(
+                'post_type' => $post_type,
+                'post_status' => 'publish',
+                'posts_per_page' => 100,
+                'paged' => 1,
+                'fields' => 'ids'
+            );
+            
+            $query = new WP_Query($args);
+            $total_pages = $query->max_num_pages;
+            
+            for ($page = 1; $page <= $total_pages; $page++) {
+                $args['paged'] = $page;
+                $query = new WP_Query($args);
+                
+                foreach ($query->posts as $post_id) {
+                    $post = get_post($post_id);
+                    if ($post) {
+                        $this->handle_post_update($post_id, $post, false, 'populate');
+                    }
+                }
+                
+                // Free up memory
+                wp_reset_postdata();
+            }
+        }
+        
+        // Regenerate the file after populating cache
+        wp_schedule_single_event(time() + 10, 'llms_update_llms_file_cron');
     }
 }

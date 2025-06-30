@@ -79,6 +79,19 @@ if (isset($_GET['import_success']) && $_GET['import_success'] === 'true' &&
     }
 }
 
+// Check for cache populated
+if (isset($_GET['cache_populated']) && $_GET['cache_populated'] === 'true' &&
+    isset($_GET['_wpnonce'])) {
+    $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce']));
+    if (wp_verify_nonce($nonce, 'llms_cache_populated')) {
+        $notices[] = array(
+            'type' => 'success',
+            'message' => __('✅ Cache population scheduled! The cache will be populated in the background.', 'wp-llms-txt'),
+            'dismissible' => true
+        );
+    }
+}
+
 // Check for errors
 if (isset($_GET['error'])) {
     $error_code = sanitize_text_field($_GET['error']);
@@ -405,6 +418,37 @@ foreach ($notices as $notice) {
                         </button>
                     </form>
                 </div>
+            </div>
+        </div>
+        
+        <div class="llms-card">
+            <div class="llms-card-header">
+                <h2 class="llms-card-title">🔄 Cache Management</h2>
+                <p class="llms-card-description">Populate cache for existing posts</p>
+            </div>
+            <div class="llms-card-content">
+                <p><?php esc_html_e('Populate the cache table with all existing posts. This is useful after initial installation or if the cache is empty.', 'wp-llms-txt'); ?></p>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="populate_llms_cache">
+                    <?php wp_nonce_field('populate_llms_cache', 'populate_llms_cache_nonce'); ?>
+                    <button type="submit" class="llms-button secondary">
+                        📦 <?php esc_html_e('Populate Cache', 'wp-llms-txt'); ?>
+                    </button>
+                </form>
+                <?php
+                // Show cache stats
+                global $wpdb;
+                $table_cache = $wpdb->prefix . 'llms_txt_cache';
+                $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$table_cache}");
+                if ($cache_count !== null) {
+                    echo '<p class="llms-text-sm llms-text-muted" style="margin-top: 1rem;">';
+                    printf(
+                        esc_html__('Cache currently contains %s posts.', 'wp-llms-txt'),
+                        '<strong>' . number_format($cache_count) . '</strong>'
+                    );
+                    echo '</p>';
+                }
+                ?>
             </div>
         </div>
 
