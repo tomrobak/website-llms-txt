@@ -45,7 +45,7 @@ jQuery(document).ready(function($) {
             
             // Disable button and show loading state
             $button.prop('disabled', true);
-            $button.html('⏳ Generating... Please wait');
+            $button.html('Generating... Please wait');
             
             // Add loading class for styling
             $button.addClass('llms-button-loading');

@@ -16,7 +16,7 @@ if (isset($_GET['cache_cleared']) && $_GET['cache_cleared'] === 'true' &&
         $notices[] = array(
             'type' => 'success',
             'message' => sprintf(
-                __('✅ Caches cleared successfully! Your LLMS.txt file has been regenerated. <a href="%s" target="_blank">View file →</a>', 'wp-llms-txt'),
+                __('Caches cleared successfully! Your LLMS.txt file has been regenerated. <a href="%s" target="_blank">View file →</a>', 'wp-llms-txt'),
                 esc_url(home_url('/llms.txt'))
             ),
             'dismissible' => true
@@ -32,7 +32,7 @@ if (isset($_GET['file_generated']) && $_GET['file_generated'] === 'true' &&
         $notices[] = array(
             'type' => 'success',
             'message' => sprintf(
-                __('🎉 LLMS.txt file generated successfully! <a href="%s" target="_blank">View your file →</a>', 'wp-llms-txt'),
+                __('LLMS.txt file generated successfully! <a href="%s" target="_blank">View your file →</a>', 'wp-llms-txt'),
                 esc_url(home_url('/llms.txt'))
             ),
             'dismissible' => true
@@ -47,7 +47,7 @@ if (isset($_GET['settings-updated']) &&
     if (wp_verify_nonce($nonce, 'llms_options_update')) {
         $notices[] = array(
             'type' => 'success',
-            'message' => __('✅ Settings saved successfully! The LLMS.txt file will be regenerated with your new settings.', 'wp-llms-txt'),
+            'message' => __('Settings saved successfully! The LLMS.txt file will be regenerated with your new settings.', 'wp-llms-txt'),
             'dismissible' => true
         );
     }
@@ -60,7 +60,7 @@ if (isset($_GET['error_log_cleared']) && $_GET['error_log_cleared'] === 'true' &
     if (wp_verify_nonce($nonce, 'llms_error_log_cleared')) {
         $notices[] = array(
             'type' => 'success',
-            'message' => __('✅ Error log cleared successfully!', 'wp-llms-txt'),
+            'message' => __('Error log cleared successfully!', 'wp-llms-txt'),
             'dismissible' => true
         );
     }
@@ -73,7 +73,7 @@ if (isset($_GET['import_success']) && $_GET['import_success'] === 'true' &&
     if (wp_verify_nonce($nonce, 'llms_import_success')) {
         $notices[] = array(
             'type' => 'success',
-            'message' => __('✅ Settings imported successfully! The LLMS.txt file will be regenerated with imported settings.', 'wp-llms-txt'),
+            'message' => __('Settings imported successfully! The LLMS.txt file will be regenerated with imported settings.', 'wp-llms-txt'),
             'dismissible' => true
         );
     }
@@ -86,7 +86,7 @@ if (isset($_GET['cache_populated']) && $_GET['cache_populated'] === 'true' &&
     if (wp_verify_nonce($nonce, 'llms_cache_populated')) {
         $notices[] = array(
             'type' => 'success',
-            'message' => __('✅ Cache population scheduled! The cache will be populated in the background.', 'wp-llms-txt'),
+            'message' => __('Cache population scheduled! The cache will be populated in the background.', 'wp-llms-txt'),
             'dismissible' => true
         );
     }
@@ -99,7 +99,7 @@ if (isset($_GET['cache_warmed']) && $_GET['cache_warmed'] === 'true' &&
     if (wp_verify_nonce($nonce, 'llms_cache_warmed')) {
         $notices[] = array(
             'type' => 'success',
-            'message' => __('🔥 Cache warming scheduled! Stale cache entries will be updated in the background.', 'wp-llms-txt'),
+            'message' => __('Cache warming scheduled! Stale cache entries will be updated in the background.', 'wp-llms-txt'),
             'dismissible' => true
         );
     }
@@ -109,14 +109,14 @@ if (isset($_GET['cache_warmed']) && $_GET['cache_warmed'] === 'true' &&
 if (isset($_GET['error'])) {
     $error_code = sanitize_text_field($_GET['error']);
     $error_messages = array(
-        'no_post_types' => __('⚠️ Please select at least one post type to include in your LLMS.txt file.', 'wp-llms-txt'),
-        'generation_failed' => __('❌ Failed to generate LLMS.txt file. Please check file permissions and try again.', 'wp-llms-txt'),
-        'permission_denied' => __('❌ Permission denied. Please check your user capabilities.', 'wp-llms-txt'),
-        'import_file_error' => __('❌ Failed to upload import file. Please try again.', 'wp-llms-txt'),
-        'import_invalid_file' => __('❌ Invalid file type. Please upload a JSON file.', 'wp-llms-txt'),
-        'import_file_too_large' => __('❌ File too large. Maximum allowed size is 1MB.', 'wp-llms-txt'),
-        'import_invalid_json' => __('❌ Invalid JSON format. Please check your export file.', 'wp-llms-txt'),
-        'import_invalid_format' => __('❌ Invalid settings format. Please use a file exported from this plugin.', 'wp-llms-txt')
+        'no_post_types' => __('Please select at least one post type to include in your LLMS.txt file.', 'wp-llms-txt'),
+        'generation_failed' => __('Failed to generate LLMS.txt file. Please check file permissions and try again.', 'wp-llms-txt'),
+        'permission_denied' => __('Permission denied. Please check your user capabilities.', 'wp-llms-txt'),
+        'import_file_error' => __('Failed to upload import file. Please try again.', 'wp-llms-txt'),
+        'import_invalid_file' => __('Invalid file type. Please upload a JSON file.', 'wp-llms-txt'),
+        'import_file_too_large' => __('File too large. Maximum allowed size is 1MB.', 'wp-llms-txt'),
+        'import_invalid_json' => __('Invalid JSON format. Please check your export file.', 'wp-llms-txt'),
+        'import_invalid_format' => __('Invalid settings format. Please use a file exported from this plugin.', 'wp-llms-txt')
     );
     
     if (isset($error_messages[$error_code])) {
@@ -178,26 +178,25 @@ foreach ($notices as $notice) {
 
 <div class="llms-container">
     <div class="llms-header">
-        <h1>🤖 WP LLMs.txt</h1>
+        <h1>WP LLMs.txt</h1>
         <p>Make your WordPress site AI-friendly with automated content discovery</p>
     </div>
 
     <!-- Status Overview -->
     <div class="llms-card">
         <div class="llms-card-header">
-            <h2 class="llms-card-title">📊 File Status & Quick Actions</h2>
+            <h2 class="llms-card-title">File Status & Quick Actions</h2>
             <p class="llms-card-description">Current status of your LLMS.txt files and generation controls</p>
         </div>
         <div class="llms-card-content">
             <?php if ($file_exists || $full_file_exists): ?>
                 <div class="llms-status success">
-                    <span>✅</span>
                     <span><?php esc_html_e('LLMS files are active and working!', 'wp-llms-txt'); ?></span>
                 </div>
                 
                 <!-- Standard llms.txt -->
                 <div style="margin-top: 1.5rem;">
-                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">📄 Standard llms.txt</h4>
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">Standard llms.txt</h4>
                     <p class="llms-text-sm llms-text-muted" style="margin: 0 0 0.5rem 0;">Follows the llmstxt.org specification for AI crawlers</p>
                     <?php if ($file_exists): ?>
                         <div class="llms-grid cols-3">
@@ -215,13 +214,13 @@ foreach ($notices as $notice) {
                             </div>
                         </div>
                     <?php else: ?>
-                        <p class="llms-text-sm" style="color: #dc2626;">⚠️ <?php esc_html_e('Standard file not yet generated', 'wp-llms-txt'); ?></p>
+                        <p class="llms-text-sm" style="color: #dc2626;"><?php esc_html_e('Standard file not yet generated', 'wp-llms-txt'); ?></p>
                     <?php endif; ?>
                 </div>
                 
                 <!-- Full llms-full.txt -->
                 <div style="margin-top: 1.5rem;">
-                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">📚 Comprehensive llms-full.txt</h4>
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">Comprehensive llms-full.txt</h4>
                     <p class="llms-text-sm llms-text-muted" style="margin: 0 0 0.5rem 0;">Contains full content for advanced AI training</p>
                     <?php if ($full_file_exists): ?>
                         <div class="llms-grid cols-3">
@@ -239,7 +238,7 @@ foreach ($notices as $notice) {
                             </div>
                         </div>
                     <?php else: ?>
-                        <p class="llms-text-sm" style="color: #dc2626;">⚠️ <?php esc_html_e('Comprehensive file not yet generated', 'wp-llms-txt'); ?></p>
+                        <p class="llms-text-sm" style="color: #dc2626;"><?php esc_html_e('Comprehensive file not yet generated', 'wp-llms-txt'); ?></p>
                     <?php endif; ?>
                 </div>
                 
@@ -248,24 +247,23 @@ foreach ($notices as $notice) {
                         <input type="hidden" name="action" value="generate_llms_file">
                         <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
                         <button type="submit" class="llms-button primary">
-                            🔄 <?php esc_html_e('Regenerate File', 'wp-llms-txt'); ?>
+                            <?php esc_html_e('Regenerate File', 'wp-llms-txt'); ?>
                         </button>
                     </form>
                     <a href="<?php echo esc_url(home_url('/llms.txt')); ?>" target="_blank" class="llms-button secondary">
-                        👁️ <?php esc_html_e('View Standard', 'wp-llms-txt'); ?>
+                        <?php esc_html_e('View Standard', 'wp-llms-txt'); ?>
                     </a>
                     <a href="<?php echo esc_url(home_url('/llms-full.txt')); ?>" target="_blank" class="llms-button secondary">
-                        📚 <?php esc_html_e('View Full', 'wp-llms-txt'); ?>
+                        <?php esc_html_e('View Full', 'wp-llms-txt'); ?>
                     </a>
                     <?php if (class_exists('RankMath') || (defined('WPSEO_VERSION') && class_exists('WPSEO_Sitemaps'))): ?>
                         <a href="<?php echo esc_url(home_url('/llms-sitemap.xml')); ?>" target="_blank" class="llms-button secondary">
-                            🗺️ <?php esc_html_e('View Sitemap', 'wp-llms-txt'); ?>
+                            <?php esc_html_e('View Sitemap', 'wp-llms-txt'); ?>
                         </a>
                     <?php endif; ?>
                 </div>
             <?php else: ?>
                 <div class="llms-status warning">
-                    <span>⚠️</span>
                     <span><?php esc_html_e('LLMS files not found - ready to generate!', 'wp-llms-txt'); ?></span>
                 </div>
                 <p class="llms-text-sm llms-text-muted llms-mt-1 llms-mb-2">
@@ -276,7 +274,7 @@ foreach ($notices as $notice) {
                     <input type="hidden" name="action" value="generate_llms_file">
                     <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
                     <button type="submit" class="llms-button primary" style="font-size: 1rem; padding: 0.875rem 1.5rem;">
-                        🚀 <?php esc_html_e('Generate LLMS Files', 'wp-llms-txt'); ?>
+                        <?php esc_html_e('Generate LLMS Files', 'wp-llms-txt'); ?>
                     </button>
                 </form>
             <?php endif; ?>
@@ -286,12 +284,12 @@ foreach ($notices as $notice) {
     <!-- Tab Navigation -->
     <div class="llms-tabs">
         <ul class="llms-tab-list">
-            <li><button class="llms-tab-button active" data-tab="content">📝 Content Settings</button></li>
-            <li><button class="llms-tab-button" data-tab="management">🛠️ Management</button></li>
-            <li><button class="llms-tab-button" data-tab="import-export">📦 Import/Export</button></li>
-            <li><button class="llms-tab-button" data-tab="logs">📋 Logs</button></li>
+            <li><button class="llms-tab-button active" data-tab="content">Content Settings</button></li>
+            <li><button class="llms-tab-button" data-tab="management">Management</button></li>
+            <li><button class="llms-tab-button" data-tab="import-export">Import/Export</button></li>
+            <li><button class="llms-tab-button" data-tab="logs">Logs</button></li>
             <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
-            <li><button class="llms-tab-button" data-tab="debug">🐛 Debug</button></li>
+            <li><button class="llms-tab-button" data-tab="debug">Debug</button></li>
             <?php endif; ?>
         </ul>
     </div>
@@ -300,7 +298,7 @@ foreach ($notices as $notice) {
     <div id="content-tab" class="llms-tab-panel active">
         <div class="llms-card">
             <div class="llms-card-header">
-                <h2 class="llms-card-title">📝 Content Configuration</h2>
+                <h2 class="llms-card-title">Content Configuration</h2>
                 <p class="llms-card-description">Configure which content types and settings to include in your LLMS.txt file</p>
             </div>
             <div class="llms-card-content">
@@ -448,7 +446,7 @@ foreach ($notices as $notice) {
         <div class="llms-grid cols-2">
             <div class="llms-card">
                 <div class="llms-card-header">
-                    <h2 class="llms-card-title">🚀 File Generation</h2>
+                    <h2 class="llms-card-title">File Generation</h2>
                     <p class="llms-card-description">Generate or regenerate your LLMS files</p>
                 </div>
                 <div class="llms-card-content">
@@ -462,7 +460,7 @@ foreach ($notices as $notice) {
                         <input type="hidden" name="active_tab" value="management">
                         <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
                         <button type="submit" class="llms-button primary">
-                            🔄 <?php esc_html_e('Generate LLMS Files', 'wp-llms-txt'); ?>
+                            <?php esc_html_e('Generate LLMS Files', 'wp-llms-txt'); ?>
                         </button>
                     </form>
                 </div>
@@ -470,7 +468,7 @@ foreach ($notices as $notice) {
             
             <div class="llms-card">
                 <div class="llms-card-header">
-                    <h2 class="llms-card-title">🛠️ Advanced: Clear Caches</h2>
+                    <h2 class="llms-card-title">Advanced: Clear Caches</h2>
                     <p class="llms-card-description">Clear system caches and force regeneration</p>
                 </div>
                 <div class="llms-card-content">
@@ -484,7 +482,7 @@ foreach ($notices as $notice) {
                         <input type="hidden" name="action" value="clear_caches">
                         <?php wp_nonce_field('clear_caches', 'clear_caches_nonce'); ?>
                         <button type="submit" class="llms-button secondary">
-                            🧹 <?php esc_html_e('Clear All Caches', 'wp-llms-txt'); ?>
+                            <?php esc_html_e('Clear All Caches', 'wp-llms-txt'); ?>
                         </button>
                     </form>
                 </div>
@@ -493,7 +491,7 @@ foreach ($notices as $notice) {
         
         <div class="llms-card">
             <div class="llms-card-header">
-                <h2 class="llms-card-title">🔄 Cache Management</h2>
+                <h2 class="llms-card-title">Cache Management</h2>
                 <p class="llms-card-description">Manage content cache for better performance</p>
             </div>
             <div class="llms-card-content">
@@ -504,7 +502,7 @@ foreach ($notices as $notice) {
                         <input type="hidden" name="action" value="populate_llms_cache">
                         <?php wp_nonce_field('populate_llms_cache', 'populate_llms_cache_nonce'); ?>
                         <button type="submit" class="llms-button secondary" style="width: 100%;">
-                            📦 <?php esc_html_e('Populate Cache', 'wp-llms-txt'); ?>
+                            <?php esc_html_e('Populate Cache', 'wp-llms-txt'); ?>
                         </button>
                         <p class="llms-text-xs llms-text-muted" style="margin-top: 0.5rem;">
                             <?php esc_html_e('Add all existing posts to cache', 'wp-llms-txt'); ?>
@@ -515,7 +513,7 @@ foreach ($notices as $notice) {
                         <input type="hidden" name="action" value="warm_llms_cache">
                         <?php wp_nonce_field('warm_llms_cache', 'warm_llms_cache_nonce'); ?>
                         <button type="submit" class="llms-button secondary" style="width: 100%;">
-                            🔥 <?php esc_html_e('Warm Cache', 'wp-llms-txt'); ?>
+                            <?php esc_html_e('Warm Cache', 'wp-llms-txt'); ?>
                         </button>
                         <p class="llms-text-xs llms-text-muted" style="margin-top: 0.5rem;">
                             <?php esc_html_e('Update stale cache entries', 'wp-llms-txt'); ?>
@@ -570,7 +568,7 @@ foreach ($notices as $notice) {
         <div class="llms-progress-section" <?php echo $show_progress ? 'data-progress-id="' . esc_attr($progress_id) . '"' : 'style="display: none;"'; ?>>
             <div class="llms-card">
                 <div class="llms-card-header">
-                    <h2 class="llms-card-title">📊 Generation Progress</h2>
+                    <h2 class="llms-card-title">Generation Progress</h2>
                     <p class="llms-card-description">Real-time progress tracking</p>
                 </div>
                 <div class="llms-card-content">
@@ -585,15 +583,15 @@ foreach ($notices as $notice) {
                         <div class="llms-progress-details"></div>
                         
                         <div class="llms-progress-controls">
-                            <button type="button" class="llms-cancel-btn">❌ Cancel</button>
-                            <button type="button" class="llms-clear-logs-btn">🗑️ Clear Old Logs</button>
+                            <button type="button" class="llms-cancel-btn">Cancel</button>
+                            <button type="button" class="llms-clear-logs-btn">Clear Old Logs</button>
                         </div>
                     </div>
                     
                     <!-- Log Viewer -->
                     <div class="llms-log-viewer">
                         <div class="llms-log-header">
-                            <h3 class="llms-log-title">📝 Activity Log</h3>
+                            <h3 class="llms-log-title">Activity Log</h3>
                             <div class="llms-log-controls">
                                 <select class="llms-log-filter">
                                     <option value="">All Levels</option>
@@ -619,7 +617,7 @@ foreach ($notices as $notice) {
         ?>
         <div class="llms-card">
             <div class="llms-card-header">
-                <h2 class="llms-card-title">🔍 Error Log</h2>
+                <h2 class="llms-card-title">Error Log</h2>
                 <p class="llms-card-description">Recent errors encountered during file generation</p>
             </div>
             <div class="llms-card-content">
@@ -649,7 +647,7 @@ foreach ($notices as $notice) {
         <div class="llms-grid cols-2">
             <div class="llms-card">
                 <div class="llms-card-header">
-                    <h2 class="llms-card-title">📤 Export Settings</h2>
+                    <h2 class="llms-card-title">Export Settings</h2>
                     <p class="llms-card-description">Download your current configuration</p>
                 </div>
                 <div class="llms-card-content">
@@ -666,7 +664,7 @@ foreach ($notices as $notice) {
 
             <div class="llms-card">
                 <div class="llms-card-header">
-                    <h2 class="llms-card-title">📥 Import Settings</h2>
+                    <h2 class="llms-card-title">Import Settings</h2>
                     <p class="llms-card-description">Upload and restore a configuration</p>
                 </div>
                 <div class="llms-card-content">
@@ -698,7 +696,7 @@ foreach ($notices as $notice) {
     <div id="logs-tab" class="llms-tab-panel">
         <div class="llms-card">
             <div class="llms-card-header">
-                <h2 class="llms-card-title">📋 Generation Logs</h2>
+                <h2 class="llms-card-title">Generation Logs</h2>
                 <p class="llms-card-description">View logs from LLMS.txt file generation process</p>
             </div>
             <div class="llms-card-content">
@@ -722,10 +720,10 @@ foreach ($notices as $notice) {
                 <!-- Log Actions -->
                 <div class="llms-button-group" style="margin-top: 15px;">
                     <button type="button" id="refresh-logs" class="llms-button llms-button-secondary">
-                        🔄 Refresh Logs
+                        Refresh Logs
                     </button>
                     <button type="button" id="clear-logs" class="llms-button llms-button-secondary llms-button-danger">
-                        🗑️ Clear Old Logs
+                        Clear Old Logs
                     </button>
                 </div>
             </div>
@@ -737,7 +735,7 @@ foreach ($notices as $notice) {
     <div id="debug-tab" class="llms-tab-panel">
         <div class="llms-card">
             <div class="llms-card-header">
-                <h2 class="llms-card-title">🐛 Debug Information</h2>
+                <h2 class="llms-card-title">Debug Information</h2>
                 <p class="llms-card-description">System information for troubleshooting</p>
             </div>
             <div class="llms-card-content">
@@ -768,8 +766,8 @@ foreach ($notices as $notice) {
                             <td><?php 
                                 $upload_dir = wp_upload_dir();
                                 echo is_writable($upload_dir['basedir']) ? 
-                                    '<span class="llms-badge success">✓ ' . esc_html__('Yes', 'wp-llms-txt') . '</span>' : 
-                                    '<span class="llms-badge warning">✗ ' . esc_html__('No', 'wp-llms-txt') . '</span>'; 
+                                    '<span class="llms-badge success">' . esc_html__('Yes', 'wp-llms-txt') . '</span>' : 
+                                    '<span class="llms-badge warning">' . esc_html__('No', 'wp-llms-txt') . '</span>'; 
                             ?></td>
                         </tr>
                     </tbody>
@@ -782,11 +780,11 @@ foreach ($notices as $notice) {
     <!-- WPLove.co Community Footer -->
     <div class="llms-footer">
         <div class="llms-footer-content">
-            <h3>🎨 Join the WPLove.co Community!</h3>
+            <h3>Join the WPLove.co Community!</h3>
             <p>Connect with passionate WordPress users, photographers, and creatives. Share knowledge, get inspired, and build amazing things together in our niche community packed with real-world WordPress wisdom.</p>
             <div class="llms-footer-buttons">
                 <a href="https://wplove.co" target="_blank" class="llms-button primary">
-                    Visit WPLove.co 📸
+                    Visit WPLove.co
                 </a>
                 <a href="https://github.com/tomrobak/website-llms-txt" target="_blank" class="llms-button secondary">
                     GitHub Repository

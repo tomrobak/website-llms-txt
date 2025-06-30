@@ -263,11 +263,11 @@ class LLMSProgressTracker {
     
     formatStatus(status) {
         const statusMap = {
-            'running': '🔄 Running',
-            'completed': '✅ Completed',
-            'cancelled': '❌ Cancelled',
-            'error': '⚠️ Error',
-            'paused': '⏸️ Paused'
+            'running': 'Running',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled',
+            'error': 'Error',
+            'paused': 'Paused'
         };
         return statusMap[status] || status;
     }
@@ -358,17 +358,17 @@ class LLMSProgressTracker {
     showCompletionMessage(status) {
         const messages = {
             'completed': {
-                title: '✅ Generation Completed Successfully!',
+                title: 'Generation Completed Successfully',
                 message: 'Your LLMS files have been generated and are ready for AI crawlers.',
                 actions: true
             },
             'cancelled': {
-                title: '❌ Generation Cancelled',
+                title: 'Generation Cancelled',
                 message: 'The file generation process was cancelled by user request.',
                 actions: false
             },
             'error': {
-                title: '⚠️ Generation Error',
+                title: 'Generation Error',
                 message: 'An error occurred during generation. Please check the logs for details.',
                 actions: false
             }
@@ -388,18 +388,18 @@ class LLMSProgressTracker {
                 ${config.actions ? `
                     <div class="llms-completion-actions">
                         <a href="${window.location.origin}/llms.txt" target="_blank" class="llms-button primary">
-                            👁️ View Standard File
+                            View Standard File
                         </a>
                         <a href="${window.location.origin}/llms-full.txt" target="_blank" class="llms-button primary">
-                            📚 View Full File
+                            View Full File
                         </a>
                         <button type="button" class="llms-button secondary" onclick="location.reload()">
-                            🔄 Back to Dashboard
+                            Back to Dashboard
                         </button>
                     </div>
                 ` : `
                     <button type="button" class="llms-button primary" onclick="location.reload()">
-                        🔄 Back to Dashboard
+                        Back to Dashboard
                     </button>
                 `}
             </div>

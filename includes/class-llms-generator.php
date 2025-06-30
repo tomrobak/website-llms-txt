@@ -594,6 +594,13 @@ class LLMS_Generator
         // Ensure cache is populated before generating
         $this->ensure_cache_populated();
         
+        // Check cache status
+        global $wpdb;
+        $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}llms_txt_cache");
+        if ($this->logger) {
+            $this->logger->info("Cache status before generation: {$cache_count} posts");
+        }
+        
         // Generate standard format header
         $this->generate_standard_header();
         
@@ -623,10 +630,17 @@ class LLMS_Generator
         // Fire action before generation starts
         do_action('llms_txt_before_generate', $this->settings);
         
-        $this->updates_all_posts();
+        // Don't call updates_all_posts here - cache should already be populated
         
         // Ensure cache is populated before generating
         $this->ensure_cache_populated();
+        
+        // Check cache status
+        global $wpdb;
+        $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}llms_txt_cache");
+        if ($this->logger) {
+            $this->logger->info("Cache status before full generation: {$cache_count} posts");
+        }
         
         if ($this->logger) {
             $this->logger->info('Generating site info...');
@@ -1495,32 +1509,68 @@ class LLMS_Generator
 
     public function update_llms_file()
     {
-        // Get progress ID from transient or generate new one
-        $progress_id = get_transient('llms_current_progress_id');
-        if (!$progress_id) {
-            $progress_id = 'file_generation_' . time();
+        try {
+            // Get progress ID from transient
+            $progress_id = get_transient('llms_current_progress_id');
+            if (!$progress_id) {
+                $this->logger->error('No progress ID found, cannot continue');
+                return false;
+            }
+            
+            // Update status to running
+            global $wpdb;
+            $wpdb->update(
+                $wpdb->prefix . 'llms_txt_progress',
+                [
+                    'status' => 'running',
+                    'updated_at' => current_time('mysql')
+                ],
+                ['id' => $progress_id]
+            );
+            
+            // Calculate total posts to process
+            $total_posts = $this->count_total_posts();
+            
+            // Update progress with correct total
+            $wpdb->update(
+                $wpdb->prefix . 'llms_txt_progress',
+                [
+                    'total_items' => $total_posts * 2, // Multiply by 2 for both file types
+                    'updated_at' => current_time('mysql')
+                ],
+                ['id' => $progress_id]
+            );
+            
+            $this->logger->info('Starting LLMS files generation', [
+                'progress_id' => $progress_id,
+                'total_posts' => $total_posts,
+                'post_types' => $this->settings['post_types']
+            ]);
+            
+            // Ensure cache is populated first
+            $this->ensure_cache_populated();
+            
+            // Generate standard llms.txt first
+            $this->generate_llms_file('standard');
+            
+            // Then generate comprehensive llms-full.txt
+            $this->generate_llms_file('full');
+            
+            // Complete progress tracking
+            $this->logger->info('LLMS files generation completed successfully');
+            $this->logger->complete_progress('completed');
+            
+            // Clear the progress ID transient
+            delete_transient('llms_current_progress_id');
+            
+            return true;
+            
+        } catch (Exception $e) {
+            $this->logger->error('Generation failed: ' . $e->getMessage());
+            $this->logger->complete_progress('error');
+            delete_transient('llms_current_progress_id');
+            return false;
         }
-        
-        // Start progress tracking only once
-        $total_posts = $this->count_total_posts();
-        $this->logger->start_progress($progress_id, $total_posts);
-        $this->logger->info('Starting LLMS files generation', [
-            'total_posts' => $total_posts,
-            'post_types' => $this->settings['post_types']
-        ]);
-        
-        // Generate standard llms.txt first
-        $this->generate_llms_file('standard');
-        
-        // Then generate comprehensive llms-full.txt
-        $this->generate_llms_file('full');
-        
-        // Complete progress tracking
-        $this->logger->info('LLMS files generation completed successfully');
-        $this->logger->complete_progress('completed');
-        
-        // Clear the progress ID transient
-        delete_transient('llms_current_progress_id');
     }
     
     /**
@@ -1650,6 +1700,9 @@ class LLMS_Generator
             }
         }
         
+        // Also ensure logs and progress tables exist
+        $this->ensure_all_tables_exist()
+        
         // Check if cache has any entries
         $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$table_cache}");
         
@@ -1665,6 +1718,65 @@ class LLMS_Generator
         } else {
             if ($this->logger) {
                 $this->logger->info("Cache contains {$cache_count} posts, skipping population");
+            }
+        }
+    }
+    
+    /**
+     * Ensure all required tables exist
+     */
+    private function ensure_all_tables_exist(): void
+    {
+        global $wpdb;
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        
+        // Check logs table
+        $logs_table = $wpdb->prefix . 'llms_txt_logs';
+        if (!$wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $logs_table))) {
+            $charset_collate = $wpdb->get_charset_collate();
+            $sql_logs = "CREATE TABLE $logs_table (
+                `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `timestamp` DATETIME DEFAULT NULL,
+                `level` VARCHAR(10) DEFAULT 'INFO',
+                `message` TEXT,
+                `context` TEXT,
+                `post_id` BIGINT UNSIGNED DEFAULT NULL,
+                `memory_usage` BIGINT DEFAULT NULL,
+                `execution_time` FLOAT DEFAULT NULL,
+                PRIMARY KEY (id),
+                KEY idx_timestamp (timestamp),
+                KEY idx_level (level),
+                KEY idx_post_id (post_id)
+            ) $charset_collate;";
+            dbDelta($sql_logs);
+            if ($this->logger) {
+                $this->logger->info("Logs table created");
+            }
+        }
+        
+        // Check progress table
+        $progress_table = $wpdb->prefix . 'llms_txt_progress';
+        if (!$wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $progress_table))) {
+            $charset_collate = $wpdb->get_charset_collate();
+            $sql_progress = "CREATE TABLE $progress_table (
+                `id` VARCHAR(50) NOT NULL,
+                `status` VARCHAR(20) DEFAULT 'running',
+                `current_item` INT DEFAULT 0,
+                `total_items` INT DEFAULT 0,
+                `current_post_id` BIGINT UNSIGNED DEFAULT NULL,
+                `current_post_title` TEXT,
+                `started_at` DATETIME DEFAULT NULL,
+                `updated_at` DATETIME DEFAULT NULL,
+                `memory_peak` BIGINT DEFAULT NULL,
+                `errors` INT DEFAULT 0,
+                `warnings` INT DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY idx_status (status),
+                KEY idx_updated (updated_at)
+            ) $charset_collate;";
+            dbDelta($sql_progress);
+            if ($this->logger) {
+                $this->logger->info("Progress table created");
             }
         }
     }

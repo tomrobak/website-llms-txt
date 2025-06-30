@@ -1,6 +1,5 @@
 /**
- * LLMS Progress Tracker Styles
- * Modern, clean UI for progress visualization
+ * LLMS Progress Tracker - Minimal shadcn/ui inspired design
  * 
  * @since 2.1.0
  */
@@ -11,74 +10,35 @@
     margin: 2rem 0;
 }
 
-.llms-progress-container {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* Progress Bar */
+/* Progress Bar - Minimal design */
 .llms-progress-wrapper {
     margin-bottom: 1.5rem;
 }
 
 .llms-progress-bar-container {
-    background: #e2e8f0;
-    border-radius: 0.5rem;
-    height: 1.5rem;
+    background: var(--llms-bg-muted);
+    border-radius: var(--llms-radius);
+    height: 0.5rem;
     overflow: hidden;
     position: relative;
 }
 
 .llms-progress-bar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--llms-primary);
     height: 100%;
     width: 0;
-    transition: width 0.3s ease;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    overflow: hidden;
-}
-
-.llms-progress-bar::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(
-        45deg,
-        rgba(255, 255, 255, 0.2) 25%,
-        transparent 25%,
-        transparent 50%,
-        rgba(255, 255, 255, 0.2) 50%,
-        rgba(255, 255, 255, 0.2) 75%,
-        transparent 75%,
-        transparent
-    );
-    background-size: 1rem 1rem;
-    animation: llms-progress-stripes 1s linear infinite;
-}
-
-@keyframes llms-progress-stripes {
-    0% {
-        background-position: 0 0;
-    }
-    100% {
-        background-position: 1rem 1rem;
-    }
 }
 
 .llms-progress-text {
-    text-align: center;
     margin-top: 0.5rem;
+    font-size: 0.875rem;
     font-weight: 500;
-    color: #334155;
+    color: var(--llms-text);
 }
 
-/* Progress Details */
+/* Progress Details - Clean grid */
 .llms-progress-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -88,137 +48,145 @@
 
 .llms-progress-stat {
     display: flex;
-    justify-content: space-between;
-    padding: 0.5rem;
-    background: #f8fafc;
-    border-radius: 0.25rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background: var(--llms-bg-subtle);
+    border: 1px solid var(--llms-border);
+    border-radius: var(--llms-radius);
 }
 
 .llms-progress-stat .label {
+    font-size: 0.75rem;
     font-weight: 500;
-    color: #64748b;
+    color: var(--llms-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .llms-progress-stat .value {
+    font-size: 0.875rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--llms-text);
 }
 
 .llms-progress-stat .value.running {
-    color: #3b82f6;
+    color: var(--llms-primary);
 }
 
 .llms-progress-stat .value.completed {
-    color: #10b981;
+    color: var(--llms-success);
 }
 
 .llms-progress-stat .value.error,
 .llms-progress-stat .value .error {
-    color: #ef4444;
+    color: var(--llms-error);
 }
 
 .llms-progress-stat .value.warning,
 .llms-progress-stat .value .warning {
-    color: #f59e0b;
+    color: var(--llms-warning);
 }
 
-/* Control Buttons */
+/* Control Buttons - Minimal */
 .llms-progress-controls {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
     margin-bottom: 1.5rem;
 }
 
 .llms-progress-controls button {
     padding: 0.5rem 1rem;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    border-radius: 0.375rem;
+    background: var(--llms-bg);
+    border: 1px solid var(--llms-border);
+    border-radius: var(--llms-radius);
     font-size: 0.875rem;
     font-weight: 500;
+    color: var(--llms-text);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--llms-transition);
 }
 
 .llms-progress-controls button:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: var(--llms-secondary);
+    border-color: var(--llms-border-strong);
 }
 
-.llms-pause-btn {
-    color: #f59e0b;
+.llms-cancel-btn:hover {
+    color: var(--llms-error);
+    border-color: var(--llms-error);
 }
 
-.llms-cancel-btn {
-    color: #ef4444;
-}
-
-/* Log Viewer */
+/* Log Viewer - Clean design */
 .llms-log-viewer {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
+    background: var(--llms-bg);
+    border: 1px solid var(--llms-border);
+    border-radius: var(--llms-radius-lg);
     margin-top: 2rem;
+    overflow: hidden;
 }
 
 .llms-log-header {
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--llms-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background: var(--llms-bg-subtle);
 }
 
 .llms-log-title {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--llms-text);
 }
 
 .llms-log-controls {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
 .llms-log-filter {
     padding: 0.375rem 0.75rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.375rem;
+    border: 1px solid var(--llms-border);
+    border-radius: var(--llms-radius);
     font-size: 0.875rem;
-    background: #fff;
+    background: var(--llms-bg);
+    color: var(--llms-text);
 }
 
 .llms-clear-logs-btn {
     padding: 0.375rem 0.75rem;
-    background: #fee2e2;
-    color: #dc2626;
-    border: none;
-    border-radius: 0.375rem;
+    background: var(--llms-bg);
+    color: var(--llms-text-secondary);
+    border: 1px solid var(--llms-border);
+    border-radius: var(--llms-radius);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all var(--llms-transition);
 }
 
 .llms-clear-logs-btn:hover {
-    background: #fecaca;
+    border-color: var(--llms-error);
+    color: var(--llms-error);
 }
 
 /* Log Container */
 .llms-log-container {
     max-height: 400px;
     overflow-y: auto;
-    padding: 1rem;
+    padding: 0;
 }
 
 .llms-log-entry {
-    padding: 0.75rem;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background 0.2s;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--llms-border);
+    transition: background var(--llms-transition);
 }
 
 .llms-log-entry:hover {
-    background: #f8fafc;
+    background: var(--llms-bg-subtle);
 }
 
 .llms-log-entry:last-child {
@@ -233,56 +201,51 @@
 }
 
 .llms-log-time {
-    color: #64748b;
+    color: var(--llms-text-muted);
 }
 
 .llms-log-level {
     font-weight: 600;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
     text-transform: uppercase;
     font-size: 0.625rem;
 }
 
 .llms-log-info .llms-log-level {
-    background: #dbeafe;
-    color: #1e40af;
+    color: var(--llms-text-secondary);
 }
 
 .llms-log-warning .llms-log-level {
-    background: #fed7aa;
-    color: #c2410c;
+    color: var(--llms-warning);
 }
 
 .llms-log-error .llms-log-level {
-    background: #fee2e2;
-    color: #dc2626;
+    color: var(--llms-error);
 }
 
 .llms-log-debug .llms-log-level {
-    background: #e0e7ff;
-    color: #4338ca;
+    color: var(--llms-text-muted);
 }
 
 .llms-log-memory,
 .llms-log-execution {
-    color: #94a3b8;
+    color: var(--llms-text-muted);
     font-size: 0.75rem;
 }
 
 .llms-log-message {
-    color: #1e293b;
+    color: var(--llms-text);
     line-height: 1.5;
+    font-size: 0.875rem;
 }
 
 .llms-log-context {
     margin-top: 0.5rem;
-    padding: 0.5rem;
-    background: #f8fafc;
-    border-radius: 0.25rem;
-    font-family: monospace;
+    padding: 0.5rem 0.75rem;
+    background: var(--llms-bg-muted);
+    border-radius: var(--llms-radius);
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
     font-size: 0.75rem;
-    color: #64748b;
+    color: var(--llms-text-secondary);
 }
 
 .llms-log-context pre {
@@ -291,15 +254,19 @@
     word-break: break-word;
 }
 
-/* Notifications */
+/* Notifications - Minimal */
 .llms-notification {
     position: fixed;
     top: 2rem;
     right: 2rem;
-    padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
+    max-width: 24rem;
+    padding: 1rem;
+    background: var(--llms-bg);
+    border: 1px solid var(--llms-border);
+    border-radius: var(--llms-radius-lg);
+    font-size: 0.875rem;
     font-weight: 500;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--llms-shadow-md);
     animation: llms-slide-in 0.3s ease;
     z-index: 9999;
 }
@@ -316,21 +283,18 @@
 }
 
 .llms-notification-completed {
-    background: #d1fae5;
-    color: #065f46;
+    border-color: var(--llms-success);
 }
 
 .llms-notification-cancelled {
-    background: #fee2e2;
-    color: #991b1b;
+    border-color: var(--llms-warning);
 }
 
 .llms-notification-error {
-    background: #fef3c7;
-    color: #92400e;
+    border-color: var(--llms-error);
 }
 
-/* Completion Card */
+/* Completion Card - Clean design */
 .llms-completion-card {
     animation: llms-fade-in 0.5s ease;
 }
@@ -347,35 +311,48 @@
 }
 
 .llms-completion-card .llms-card-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     margin-bottom: 0.5rem;
 }
 
 .llms-completion-actions {
     display: flex;
-    gap: 1rem;
+    gap: 0.75rem;
     margin-top: 1.5rem;
     flex-wrap: wrap;
 }
 
 .llms-completion-completed .llms-card-header {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-    color: #065f46;
+    background: var(--llms-success-bg);
+    border-bottom-color: var(--llms-success-border);
 }
 
 .llms-completion-cancelled .llms-card-header {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    color: #991b1b;
+    background: var(--llms-warning-bg);
+    border-bottom-color: var(--llms-warning-border);
 }
 
 .llms-completion-error .llms-card-header {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    color: #92400e;
+    background: var(--llms-error-bg);
+    border-bottom-color: var(--llms-error-border);
 }
 
-/* Progress Bar Smooth Animation */
-.llms-progress-bar {
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+/* Scrollbar styling */
+.llms-log-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.llms-log-container::-webkit-scrollbar-track {
+    background: var(--llms-bg-subtle);
+}
+
+.llms-log-container::-webkit-scrollbar-thumb {
+    background: var(--llms-border-strong);
+    border-radius: 4px;
+}
+
+.llms-log-container::-webkit-scrollbar-thumb:hover {
+    background: var(--llms-text-muted);
 }
 
 /* Responsive */
@@ -387,6 +364,7 @@
     .llms-log-header {
         flex-direction: column;
         gap: 1rem;
+        align-items: flex-start;
     }
     
     .llms-progress-controls {
@@ -406,5 +384,20 @@
     .llms-completion-actions .llms-button {
         width: 100%;
         text-align: center;
+    }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+    .llms-progress-bar-container {
+        background: var(--llms-bg-muted);
+    }
+    
+    .llms-log-viewer {
+        background: var(--llms-bg);
+    }
+    
+    .llms-notification {
+        background: var(--llms-bg-muted);
     }
 }

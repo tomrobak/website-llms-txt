@@ -60,6 +60,11 @@ require_once LLMS_PLUGIN_DIR . 'includes/class-llms-rest-api.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-generator.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-core.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-updater.php';
+
+// Debug tool (only in admin)
+if (is_admin()) {
+    require_once LLMS_PLUGIN_DIR . 'includes/debug-fix.php';
+}
 // Note: class-llms-provider.php is loaded conditionally in LLMS_Core::init_seo_integrations()
 
 /**

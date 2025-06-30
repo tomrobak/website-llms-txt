@@ -163,15 +163,26 @@ class LLMS_REST_API {
      * Start generation process
      */
     public function start_generation(WP_REST_Request $request): WP_REST_Response {
-        // Get progress ID from transient or create one
-        $progress_id = get_transient('llms_current_progress_id');
+        // Get progress ID from request or transient
+        $progress_id = $request->get_param('progress_id');
+        
         if (!$progress_id) {
-            // Create new progress ID if none exists
-            $progress_id = 'api_generation_' . time();
-            set_transient('llms_current_progress_id', $progress_id, HOUR_IN_SECONDS);
-            
-            // Create initial progress entry in database
-            global $wpdb;
+            $progress_id = get_transient('llms_current_progress_id');
+        }
+        
+        if (!$progress_id) {
+            return new WP_REST_Response(['error' => 'No progress ID found'], 400);
+        }
+        
+        // Check if progress exists in database
+        global $wpdb;
+        $progress = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}llms_txt_progress WHERE id = %s",
+            $progress_id
+        ));
+        
+        if (!$progress) {
+            // Create progress entry if it doesn't exist
             $wpdb->insert(
                 $wpdb->prefix . 'llms_txt_progress',
                 [
@@ -183,28 +194,37 @@ class LLMS_REST_API {
                     'updated_at' => current_time('mysql')
                 ]
             );
+        } elseif ($progress->status === 'running') {
+            // Check if actually running by checking if updated recently (within 5 minutes)
+            $last_update = strtotime($progress->updated_at);
+            $now = time();
+            
+            if (($now - $last_update) < 300) {
+                return new WP_REST_Response(['error' => 'Generation already running', 'progress_id' => $progress_id], 409);
+            } else {
+                // Stale progress, reset it
+                $wpdb->update(
+                    $wpdb->prefix . 'llms_txt_progress',
+                    ['status' => 'pending'],
+                    ['id' => $progress_id]
+                );
+            }
         }
         
-        // Check if already running
-        global $wpdb;
-        $status = $wpdb->get_var($wpdb->prepare(
-            "SELECT status FROM {$wpdb->prefix}llms_txt_progress WHERE id = %s",
-            $progress_id
-        ));
+        // Set transient to keep track
+        set_transient('llms_current_progress_id', $progress_id, HOUR_IN_SECONDS);
         
-        if ($status === 'running') {
-            return new WP_REST_Response(['error' => 'Generation already running', 'progress_id' => $progress_id], 409);
-        }
-        
-        // Schedule generation to run in background
+        // Clear any existing scheduled hooks
         wp_clear_scheduled_hook('llms_update_llms_file_cron');
-        wp_schedule_single_event(time() + 1, 'llms_update_llms_file_cron');
         
-        // Update status to running
+        // Schedule generation to run immediately
+        wp_schedule_single_event(time(), 'llms_update_llms_file_cron');
+        
+        // Update status to starting
         $wpdb->update(
             $wpdb->prefix . 'llms_txt_progress',
             [
-                'status' => 'running',
+                'status' => 'starting',
                 'updated_at' => current_time('mysql')
             ],
             ['id' => $progress_id],
@@ -214,7 +234,7 @@ class LLMS_REST_API {
         
         return new WP_REST_Response([
             'success' => true,
-            'message' => 'Generation started',
+            'message' => 'Generation scheduled',
             'progress_id' => $progress_id
         ], 200);
     }
