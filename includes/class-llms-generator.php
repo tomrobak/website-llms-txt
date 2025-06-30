@@ -721,17 +721,18 @@ class LLMS_Generator
                  LIMIT %d",
                 $max_posts_per_type
             ));
-        
-        if (!empty($pages)) {
-            foreach ($pages as $page) {
-                $description = $page->meta ?: wp_trim_words($page->content, 30);
-                $output .= "- [" . esc_html($page->title) . "](" . esc_url($page->link) . "): " . 
-                          wp_trim_words($description, 20) . "\n";
+            
+            if (!empty($pages)) {
+                foreach ($pages as $page) {
+                    $description = $page->meta ?: wp_trim_words($page->content, 30);
+                    $output .= "- [" . esc_html($page->title) . "](" . esc_url($page->link) . "): " . 
+                              wp_trim_words($description, 20) . "\n";
+                }
+                $output .= "\n";
             }
-            $output .= "\n";
+            
+            $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
         }
-        
-        $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
         
         // Posts Section - respecting post types settings
         $output = "## Posts\n\n";
@@ -739,16 +740,16 @@ class LLMS_Generator
         // Get posts based on configured types and limit
         if (!empty($content_types)) {
             // Build safe SQL for configured post types
-            $type_placeholders = implode(',', array_fill(0, count($content_types), '%s'));
-            $query_args = array_merge($content_types, [$max_posts_per_type]);
+            $escaped_types = array_map('esc_sql', $content_types);
+            $types_string = "'" . implode("','", $escaped_types) . "'";
             
             $posts = $wpdb->get_results($wpdb->prepare(
                 "SELECT post_id, title, link, meta, content, type FROM $table_cache 
-                 WHERE type IN ($type_placeholders) 
+                 WHERE type IN ({$types_string}) 
                  AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
                  ORDER BY published DESC
                  LIMIT %d",
-                ...$query_args
+                $max_posts_per_type
             ));
         } else {
             $posts = [];
