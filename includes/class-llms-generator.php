@@ -487,7 +487,9 @@ class LLMS_Generator
                     foreach ($posts as $cache_post) {
                         if(!$cache_post->post_id) {
                             $post = get_post($cache_post->ID);
-                            $this->handle_post_update($cache_post->ID, $post, 'manual');
+                            if ($post) {
+                                $this->handle_post_update($cache_post->ID, $post, 'manual');
+                            }
                             unset($post);
                         }
                     }
