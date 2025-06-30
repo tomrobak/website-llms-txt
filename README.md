@@ -1,10 +1,15 @@
 # WP LLMs.txt Plugin
 
-**Version: 2.0.1** | **Last Updated: 2025-06-30**
+**Version: 2.0.2** | **Last Updated: 2025-06-30**
 
 A WordPress plugin that generates LLMS.txt files for AI/LLM content consumption with SEO plugin integration. Originally created by Website LLM, forked and maintained by Tom Robak.
 
 ## ✨ Recent Updates
+
+### Additional Fixes (2025-06-30 - v2.0.2)
+- **Enhanced Debugging** - Added comprehensive logging for troubleshooting
+- **Fixed Edge Cases** - Resolved issues with max_posts limit and cache queries
+- **SQL Improvements** - Added post_status check to content updates
 
 ### Critical Bug Fixes (2025-06-30 - v2.0.1)
 - **Fixed Fatal Error** - Resolved TypeError in update checker when WordPress passes false

@@ -5,6 +5,25 @@ All notable changes to WP LLMs.txt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2025-06-30
+
+### 🐛 Additional Bug Fixes
+
+This patch adds comprehensive debugging and fixes edge cases in content generation.
+
+### Fixed
+
+- **Empty Content**: Fixed issue where posts were not being processed from cache
+- **Max Posts Limit**: Fixed edge case when max_posts setting is 0
+- **SQL Query**: Added post_status check to updates_all_posts query
+- **Cache Detection**: Added debugging for cache table content
+
+### Added
+
+- **Enhanced Debugging**: Comprehensive logging throughout content generation
+- **Query Debugging**: Log all SQL queries and result counts
+- **Cache Validation**: Check cache table content before processing
+
 ## [2.0.1] - 2025-06-30
 
 ### 🐛 Critical Bug Fixes

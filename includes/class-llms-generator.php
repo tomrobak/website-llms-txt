@@ -388,6 +388,10 @@ class LLMS_Generator
             if (defined('WP_CLI') && WP_CLI) {
                 \WP_CLI::log('Processing type: ' . $post_type);
             }
+            
+            // Debug: Check if table exists and has data
+            $count_in_cache = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table_cache} WHERE type = %s", $post_type));
+            $this->log_error("Posts in cache for {$post_type}: {$count_in_cache}");
 
             $offset = 0;
             do {
@@ -395,7 +399,7 @@ class LLMS_Generator
                 $params[] = $this->limit;
                 $params[] = $offset;
                 $params = [$post_type, $this->limit, $offset];
-                $conditions = "WHERE p.post_type = %s AND cache.post_id IS NULL";
+                $conditions = "WHERE p.post_type = %s AND p.post_status = 'publish' AND cache.post_id IS NULL";
                 $joins = " LEFT JOIN {$table_cache} cache ON p.ID = cache.post_id ";
                 $posts = $wpdb->get_results($wpdb->prepare("SELECT p.ID, cache.* FROM {$wpdb->posts} p $joins $conditions ORDER BY p.post_date DESC LIMIT %d OFFSET %d", ...$params));
 
@@ -522,6 +526,11 @@ class LLMS_Generator
                 ];
 
                 $posts = $wpdb->get_results($wpdb->prepare("SELECT `post_id`, `overview` FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
+                
+                // Debug: Log query and results
+                $this->log_error("Overview query for {$post_type}: " . $wpdb->prepare("SELECT `post_id`, `overview` FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
+                $this->log_error("Overview results count: " . count($posts));
+                
                 if (defined('WP_CLI') && WP_CLI) {
                     \WP_CLI::log('Count: ' . count($posts));
                     \WP_CLI::log($wpdb->prepare("SELECT `post_id`, `overview` FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
@@ -532,8 +541,11 @@ class LLMS_Generator
                     // Allow developers to filter max posts per type
                     $max_posts = apply_filters('llms_txt_max_posts_per_type', $this->settings['max_posts'], $post_type);
                     
+                    // Debug: Log max posts setting
+                    $this->log_error("Max posts for {$post_type}: {$max_posts}");
+                    
                     foreach ($posts as $data) {
-                        if($i > $max_posts) {
+                        if($max_posts > 0 && $i >= $max_posts) {
                             $exit = true;
                             break;
                         }
@@ -639,7 +651,7 @@ class LLMS_Generator
                     
                     foreach ($posts as $data) {
                         if (!$data->content) continue;
-                        if ($i > $max_posts) {
+                        if ($max_posts > 0 && $i >= $max_posts) {
                             $exit = true;
                             break;
                         }
