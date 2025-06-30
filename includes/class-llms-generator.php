@@ -64,6 +64,7 @@ class LLMS_Generator
         add_action('llms_update_llms_file_cron', array($this, 'update_llms_file'));
         add_action('init', array($this, 'llms_create_txt_cache_table_if_not_exists'), 999);
         add_action('updates_all_posts', array($this, 'updates_all_posts'), 999);
+        add_action('init', array($this, 'check_version_update'), 5);
     }
 
     public function llms_create_txt_cache_table_if_not_exists()
@@ -171,6 +172,19 @@ class LLMS_Generator
         
         if (!in_array('product_type', $column_names)) {
             $wpdb->query("ALTER TABLE {$table} ADD COLUMN product_type VARCHAR(50) DEFAULT NULL AFTER stock_quantity");
+        }
+    }
+
+    public function check_version_update()
+    {
+        $last_version = get_option('llms_version_activated', '1.0.0');
+        if (version_compare($last_version, LLMS_VERSION, '<')) {
+            // Version updated, force cache refresh
+            if ($this->logger) {
+                $this->logger->info("Version updated from {$last_version} to " . LLMS_VERSION . ", scheduling cache refresh");
+            }
+            wp_schedule_single_event(time() + 5, 'llms_populate_cache');
+            update_option('llms_version_activated', LLMS_VERSION);
         }
     }
 
@@ -292,18 +306,8 @@ class LLMS_Generator
     public function get_llms_file_path() {
         $upload_dir = wp_upload_dir();
         
-        // Initialize llms_name if not set
-        if (empty($this->llms_name)) {
-            $siteurl = get_option('siteurl');
-            if($siteurl) {
-                $parsed = parse_url($siteurl);
-                $this->llms_name = isset($parsed['host']) ? $parsed['host'] : 'localhost';
-            } else {
-                $this->llms_name = 'localhost';
-            }
-        }
-        
-        return $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
+        // Use consistent filename - just llms.txt
+        return $upload_dir['basedir'] . '/llms.txt';
     }
     
     /**
@@ -384,7 +388,7 @@ class LLMS_Generator
                     $this->log_error('Failed to get upload directory: ' . $upload_dir['error']);
                     return false;
                 }
-                $this->llms_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
+                $this->llms_path = $upload_dir['basedir'] . '/llms.txt';
             }
 
             // Ensure directory exists
@@ -425,7 +429,8 @@ class LLMS_Generator
                 return $content;
             }
             
-            $upload_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
+            // Use consistent filename - just llms.txt, not domain.llms.txt
+            $upload_path = $upload_dir['basedir'] . '/llms.txt';
             
             // Generate cache key based on file path
             $cache_key = 'llms_txt_content_' . md5($upload_path);
@@ -751,6 +756,17 @@ class LLMS_Generator
                 ];
 
                 $posts = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
+                
+                // Debug: Check total counts by visibility
+                if ($offset === 0) {
+                    $total_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_cache WHERE `type` = %s", $post_type));
+                    $visible_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_cache WHERE `type` = %s AND (`is_visible`=1 OR `is_visible` IS NULL) AND `status`='publish'", $post_type));
+                    $hidden_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_cache WHERE `type` = %s AND `is_visible`=0", $post_type));
+                    
+                    if ($this->logger) {
+                        $this->logger->info("Cache stats for {$post_type}: Total={$total_count}, Visible={$visible_count}, Hidden={$hidden_count}");
+                    }
+                }
                 
                 // Debug logging
                 if (empty($posts)) {
@@ -1104,38 +1120,56 @@ class LLMS_Generator
             $clean_description = preg_replace('/[\x{00A0}\x{200B}\x{200C}\x{200D}\x{FEFF}]/u', ' ', $meta_description);
         }
 
-        $is_visible = 1;
+        // Start with visible = NULL (let query decide with OR condition)
+        $is_visible = null;
+        
+        // Only mark as not visible if explicitly set to noindex in SEO plugins
         $use_yoast = class_exists('WPSEO_Meta');
         $use_rankmath = function_exists('rank_math');
+        
         if($use_yoast) {
             $robots_noindex = get_post_meta($post_id, '_yoast_wpseo_meta-robots-noindex', true);
-            $robots_nofollow = get_post_meta($post_id, '_yoast_wpseo_meta-robots-nofollow', true);
-            if($robots_noindex || $robots_nofollow) {
+            // Only check noindex, not nofollow (nofollow doesn't mean exclude from AI training)
+            if($robots_noindex === '1') {
                 $is_visible = 0;
             }
         }
 
-        if ($use_rankmath) {
-            $robots_noindex = get_post_meta($post_id, 'rank_math_robots', true);
-            if($robots_noindex) {
+        if ($use_rankmath && $is_visible !== 0) {
+            $robots_meta = get_post_meta($post_id, 'rank_math_robots', true);
+            // Check if noindex is specifically set in the robots array
+            if(is_array($robots_meta) && in_array('noindex', $robots_meta)) {
                 $is_visible = 0;
             }
         }
 
         $aioseo_enabled = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}aioseo_posts'") === "{$wpdb->prefix}aioseo_posts";
-        if($aioseo_enabled) {
-            $row = $wpdb->get_row($wpdb->prepare("SELECT robots_noindex, robots_nofollow FROM {$wpdb->prefix}aioseo_posts WHERE post_id = %d", $post_id));
-            if(isset($row->robots_noindex) && $row->robots_noindex) {
-                $is_visible = 0;
-            }
-
-            if(isset($row->robots_nofollow) && $row->robots_nofollow) {
+        if($aioseo_enabled && $is_visible !== 0) {
+            $row = $wpdb->get_row($wpdb->prepare("SELECT robots_noindex FROM {$wpdb->prefix}aioseo_posts WHERE post_id = %d", $post_id));
+            // Only check noindex, and only if it's explicitly set to 1
+            if(isset($row->robots_noindex) && $row->robots_noindex == 1) {
                 $is_visible = 0;
             }
         }
         
+        // Default to visible if no SEO plugin explicitly set noindex
+        if ($is_visible === null) {
+            $is_visible = 1;
+        }
+        
         // Allow developers to override whether to include a post
         $is_visible = apply_filters('llms_txt_include_post', $is_visible, $post_id, $post);
+        
+        // Debug logging for visibility decisions
+        if ($mode === 'populate' && $this->logger) {
+            $this->logger->debug("Post {$post_id} ({$post->post_title}) visibility: {$is_visible}", [
+                'post_type' => $post->post_type,
+                'post_status' => $post->post_status,
+                'yoast_detected' => $use_yoast,
+                'rankmath_detected' => $use_rankmath,
+                'aioseo_detected' => $aioseo_enabled
+            ], $post_id);
+        }
 
         $excerpts = $this->remove_shortcodes($post->post_excerpt);
         
@@ -1273,7 +1307,7 @@ class LLMS_Generator
             }
         }
 
-        $upload_path = $upload_dir['basedir'] . '/' . $this->llms_name . '.llms.txt';
+        $upload_path = $upload_dir['basedir'] . '/llms.txt';
         if (file_exists($upload_path)) {
             if (!@unlink($upload_path)) {
                 $this->log_error('Failed to delete file: ' . $upload_path);

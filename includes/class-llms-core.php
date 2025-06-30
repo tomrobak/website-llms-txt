@@ -483,8 +483,10 @@ class LLMS_Core {
         if (get_query_var('llms_txt')) {
             $latest_post = apply_filters('get_llms_content', '');
             if ($latest_post) {
-                header('Content-Type: text/plain');
-                echo esc_html($latest_post);
+                header('Content-Type: text/plain; charset=utf-8');
+                header('Cache-Control: public, max-age=300'); // Cache for 5 minutes
+                // Don't escape HTML - this is a text file with intended formatting
+                echo $latest_post;
                 exit;
             }
         }
