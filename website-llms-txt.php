@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP LLMs.txt
  * Description: Manages and automatically generates LLMS.txt files for LLM/AI consumption and integrates with SEO plugins (Yoast SEO, RankMath). Originally created by Website LLM - forked and modified by Tom Robak.
- * Version: 2.2.3
+ * Version: 2.3.0
  * Author: Tom Robak
  * Author URI: https://wplove.co
  * Text Domain: wp-llms-txt
@@ -46,7 +46,7 @@ if (version_compare(get_bloginfo('version'), '6.7', '<')) {
 }
 
 // Define plugin constants
-define('LLMS_VERSION', '2.2.3');
+define('LLMS_VERSION', '2.3.0');
 define('LLMS_PLUGIN_FILE', __FILE__);
 define('LLMS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('LLMS_PLUGIN_URL', plugin_dir_url(__FILE__));

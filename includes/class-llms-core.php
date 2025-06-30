@@ -331,10 +331,17 @@ class LLMS_Core {
         $this->add_rewrite_rule();
         flush_rewrite_rules();
 
+        // Clean up old upload location
         $upload_dir = wp_upload_dir();
-        $upload_path = $upload_dir['basedir'] . '/llms.txt';
-        if (file_exists($upload_path)) {
-            unlink($upload_path);
+        $old_path = $upload_dir['basedir'] . '/llms.txt';
+        if (file_exists($old_path)) {
+            @unlink($old_path);
+        }
+        
+        // Delete from root location
+        $file_path = ABSPATH . 'llms.txt';
+        if (file_exists($file_path)) {
+            @unlink($file_path);
         }
 
         wp_clear_scheduled_hook('llms_update_llms_file_cron');
@@ -586,10 +593,9 @@ class LLMS_Core {
         update_option('llms_generator_settings', $new_settings);
         
         // Clear cache after import
-        $upload_dir = wp_upload_dir();
-        $upload_path = $upload_dir['basedir'] . '/llms.txt';
-        if (file_exists($upload_path)) {
-            unlink($upload_path);
+        $file_path = ABSPATH . 'llms.txt';
+        if (file_exists($file_path)) {
+            @unlink($file_path);
         }
         
         // Schedule regeneration
