@@ -92,12 +92,15 @@ test-*.php
 *-test.php
 
 # Development & Debug files (local only)
+# Note: debug-fix.php is kept in repo as it's required for plugin functionality
 debug-*.php
+!debug-fix.php
 fix-*.php
 diagnose-*.php
 regenerate-*.php
 test-*.php
 **/debug-*.php
+!**/debug-fix.php
 **/fix-*.php
 **/diagnose-*.php
 **/regenerate-*.php

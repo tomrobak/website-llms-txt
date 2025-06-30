@@ -5,6 +5,23 @@ All notable changes to WP LLMs.txt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.1] - 2025-06-30
+
+### 🔧 Critical Fixes
+
+Hotfix release addressing fatal activation errors discovered in production.
+
+### Fixed
+
+- **Fatal Error**: Plugin activation failing due to missing `debug-fix.php` file in repository
+- **PHP Warning**: Undefined `$upload_path` variable causing deprecation warnings
+- **File Inclusion**: Added proper `file_exists()` check for debug file loading
+
+### Changed
+
+- **Repository**: Added `debug-fix.php` to version control with gitignore exception
+- **Code Cleanup**: Removed obsolete file copy operations in generator
+
 ## [2.5.0] - 2025-06-30
 
 ### 🎨 UI/UX Overhaul & Critical Fixes
