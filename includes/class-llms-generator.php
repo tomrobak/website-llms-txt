@@ -26,7 +26,7 @@ class LLMS_Generator
         $defaults = array(
             'post_types' => array('page', 'post'), // Only core post types as default
             'max_posts' => 500, // Higher limit for comprehensive AI training
-            'max_words' => 1000, // Better default for AI training
+            'max_words' => 250, // Recommended default for optimal AI consumption
             'include_meta' => true,
             'include_excerpts' => true,
             'include_taxonomies' => true,
@@ -1167,7 +1167,7 @@ class LLMS_Generator
                         $output .= "\n### " . esc_html($data->title) . "\n";
 
                         // Respect the max_words setting from admin panel
-                        $max_words = intval($this->settings['max_words'] ?? 1000);
+                        $max_words = intval($this->settings['max_words'] ?? 250);
                         $content = wp_trim_words($data->content, $max_words, '... [content truncated due to word limit]');
                         
                         // Allow developers to filter the content

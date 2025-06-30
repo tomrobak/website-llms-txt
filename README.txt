@@ -4,13 +4,28 @@ Tags: ai, llms, seo, sitemap, artificial-intelligence, chatgpt, claude, llm, mac
 Requires at least: 6.7
 Tested up to: 6.7
 Requires PHP: 8.3
-Stable tag: 2.4.0
+Stable tag: 2.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Automatically generate llms.txt files for AI systems like ChatGPT, Claude & Perplexity. A supercharged fork with security fixes, performance boosts & WooCommerce support.
 
 == Changelog ==
+
+= 2.5.0 =
+* UI/UX: Complete redesign following shadcn/ui neutral color palette
+* UI/UX: Replaced all colorful elements with professional zinc/gray tones
+* Fixed: Multiple fatal PHP syntax errors (missing semicolons and braces)
+* Fixed: Generator class not initializing - causing empty cache (0 posts)
+* Fixed: Race conditions between REST API and cron with new database locking
+* Fixed: Settings not being respected (post_types, max_posts, max_words)
+* Fixed: Standard llms.txt now includes ALL posts/pages as per specification
+* Improved: Changed default max_words from 1000 to 250 (recommended for AI)
+* Improved: Better memory management during large site generation
+* Improved: Enhanced error handling and logging throughout
+* Added: LLMS_Generation_Lock class to prevent concurrent access issues
+* Changed: Plugin menu location from Settings to Tools → Llms.txt
+* Note: Plugin is distributed via GitHub only with built-in auto-updates
 
 = 2.4.0 =
 * NEW: Dual-file system - generates both standard llms.txt and comprehensive llms-full.txt

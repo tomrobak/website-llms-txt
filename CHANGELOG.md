@@ -5,6 +5,41 @@ All notable changes to WP LLMs.txt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2025-06-30
+
+### 🎨 UI/UX Overhaul & Critical Fixes
+
+Major release with complete UI redesign following shadcn/ui design principles and critical functionality fixes.
+
+### Added
+
+- **Modern UI Design**: Complete redesign with zinc/neutral color palette following shadcn/ui
+- **Database Locking**: New LLMS_Generation_Lock class prevents race conditions
+- **Settings Compliance**: Proper respect for post_types, max_posts, and max_words settings
+- **Standard Format Fix**: llms.txt now includes ALL posts/pages as per specification
+
+### Fixed
+
+- **Fatal PHP Errors**: Fixed multiple syntax errors (missing semicolons, braces)
+- **Empty Cache Issue**: Generator class now properly initializes on plugin load
+- **Race Conditions**: Implemented database locking between REST API and cron jobs
+- **Settings Ignored**: Fixed hard-coded post types, now uses user settings
+- **Standard llms.txt**: Now includes all content, not just recent posts
+
+### Changed
+
+- **UI Colors**: Replaced vibrant colors with professional zinc/gray palette
+- **Status Messages**: Removed all emojis from progress indicators
+- **File Generation**: Improved batch processing with proper memory management
+- **Error Handling**: Enhanced error reporting and logging throughout
+
+### Improved
+
+- **Performance**: Better memory management during large site generation
+- **Reliability**: Atomic database operations prevent concurrent access issues
+- **User Experience**: Cleaner, more professional interface
+- **Code Quality**: Fixed numerous edge cases and error conditions
+
 ## [2.1.3] - 2025-06-30
 
 ### 🐛 Progress Tracking and Generation Fix

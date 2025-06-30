@@ -27,6 +27,12 @@ Thank you for your interest in contributing to WP LLMs.txt! This guide will help
 - Use WordPress APIs instead of direct implementations
 - Maintain backward compatibility when possible
 
+### 🔄 Auto-Update System
+- Plugin includes GitHub-based auto-update functionality
+- Updates check `https://api.github.com/repos/tomrobak/website-llms-txt/releases/latest`
+- Ensure version numbers follow semantic versioning
+- Tag releases properly on GitHub for auto-updates to work
+
 ### 🛠️ Development Environment
 - Local WordPress installation
 - PHP 8.3+ with extensions: `mbstring`, `xml`, `json`, `curl`
@@ -104,12 +110,12 @@ public function example_function(string $param1, int $param2): bool {
 5. **Multi-PHP**: Test on PHP 8.3 and 8.4 if possible
 
 ### 🚨 Automatic Checks
-Our CI pipeline will automatically check:
-- PHP syntax and compatibility
-- WordPress coding standards
-- Security vulnerabilities
-- Plugin structure validation
-- Code quality metrics
+Our GitHub Actions pipeline runs on releases:
+- PHP syntax validation
+- WordPress plugin structure checks
+- Version compatibility verification
+- Automated release package creation
+- Asset upload to GitHub releases
 
 ## 🎯 Contribution Types
 
@@ -133,10 +139,11 @@ Our CI pipeline will automatically check:
 - Use emojis consistently 😊
 
 ### 🎨 UI/UX Improvements
-- Follow WordPress admin design patterns
+- Follow shadcn/ui design principles with zinc/neutral color palette
 - Ensure accessibility (WCAG compliance)
 - Test on different screen sizes
 - Maintain consistency with existing UI
+- Avoid colorful elements - keep it professional and neutral
 
 ## 🔄 Pull Request Process
 
@@ -170,8 +177,11 @@ feat: add new LLMS.txt generation feature
 - Add user interface for configuration
 - Include comprehensive error handling
 - Update documentation with examples
+```
 
-🔧 Generated with [Claude Code](https://claude.ai/code)
+Note: If you used Claude Code for development, add:
+```
+🤖 Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```

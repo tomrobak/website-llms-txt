@@ -90,3 +90,21 @@ composer.lock
 /tests/logs/
 test-*.php
 *-test.php
+
+# Development & Debug files (local only)
+debug-*.php
+fix-*.php
+diagnose-*.php
+regenerate-*.php
+test-*.php
+**/debug-*.php
+**/fix-*.php
+**/diagnose-*.php
+**/regenerate-*.php
+**/test-*.php
+phpstan.neon
+composer.json
+composer.lock
+
+# Local configuration
+CLAUDE.md

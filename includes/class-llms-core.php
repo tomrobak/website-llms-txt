@@ -120,7 +120,7 @@ class LLMS_Core {
                 'default' => [
                     'post_types' => ['page', 'post'], // Only core post types as default
                     'max_posts' => 500, // Higher limit for comprehensive AI training
-                    'max_words' => 1000, // Better default for AI training
+                    'max_words' => 250, // Recommended default for optimal AI consumption
                     'include_meta' => true,
                     'include_excerpts' => true,
                     'include_taxonomies' => true,
