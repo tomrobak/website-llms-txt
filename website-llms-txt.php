@@ -81,6 +81,9 @@ function llms_init(): void {
     new LLMS_Cache_Manager();
     new LLMS_Progress();
     
+    // CRITICAL: Initialize Generator - this was missing!
+    new LLMS_Generator();
+    
     // Initialize auto-updater
     new LLMS_Updater(plugin_file: __FILE__, github_repo: 'tomrobak/website-llms-txt');
 }

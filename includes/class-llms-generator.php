@@ -1467,9 +1467,12 @@ class LLMS_Generator
         );
         
         if ($result === false) {
-            $this->logger->error("Failed to insert/update cache for post {$post_id}. Last DB error: " . $wpdb->last_error);
+            if ($this->logger) {
+                $this->logger->error("Failed to insert/update cache for post {$post_id}. Last DB error: " . $wpdb->last_error);
+            }
+            error_log("[WP LLMs.txt] Failed to cache post {$post_id}: " . $wpdb->last_error);
         } else {
-            if ($mode === 'populate') {
+            if ($mode === 'populate' && $this->logger) {
                 $this->logger->debug("Successfully cached post {$post_id}");
             }
         }
