@@ -276,9 +276,24 @@ class LLMS_Logger {
     public function rest_get_logs(WP_REST_Request $request): WP_REST_Response {
         global $wpdb;
         
-        $last_id = $request->get_param('last_id');
-        $level = $request->get_param('level');
-        $limit = min(100, $request->get_param('limit'));
+        // Check if table exists
+        $table = $wpdb->prefix . 'llms_txt_logs';
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SHOW TABLES LIKE %s",
+            $table
+        ));
+        
+        if (!$table_exists) {
+            return new WP_REST_Response([
+                'error' => 'Logs table does not exist',
+                'logs' => [],
+                'has_more' => false
+            ], 200);
+        }
+        
+        $last_id = absint($request->get_param('last_id') ?? 0);
+        $level = sanitize_text_field($request->get_param('level') ?? '');
+        $limit = min(100, absint($request->get_param('limit') ?? 50));
         
         $where = "id > %d";
         $params = [$last_id];
@@ -288,27 +303,48 @@ class LLMS_Logger {
             $params[] = $level;
         }
         
-        $logs = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}llms_txt_logs 
-            WHERE $where 
-            ORDER BY id DESC 
-            LIMIT %d",
-            array_merge($params, [$limit])
-        ), ARRAY_A);
-        
-        // Format logs
-        foreach ($logs as &$log) {
-            $log['memory_formatted'] = !empty($log['memory_usage']) ? size_format($log['memory_usage']) : 'N/A';
-            $log['time_formatted'] = !empty($log['execution_time']) ? number_format($log['execution_time'], 2) . 's' : 'N/A';
-            if (!empty($log['context'])) {
-                $log['context'] = json_decode($log['context'], true);
+        try {
+            $logs = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}llms_txt_logs 
+                WHERE $where 
+                ORDER BY id DESC 
+                LIMIT %d",
+                array_merge($params, [$limit])
+            ), ARRAY_A);
+            
+            if ($wpdb->last_error) {
+                return new WP_REST_Response([
+                    'error' => 'Database error: ' . $wpdb->last_error,
+                    'logs' => [],
+                    'has_more' => false
+                ], 500);
             }
+            
+            // Format logs
+            $formatted_logs = [];
+            if (is_array($logs)) {
+                foreach ($logs as $log) {
+                    $formatted_log = $log;
+                    $formatted_log['memory_formatted'] = !empty($log['memory_usage']) ? size_format($log['memory_usage']) : 'N/A';
+                    $formatted_log['time_formatted'] = !empty($log['execution_time']) ? number_format($log['execution_time'], 2) . 's' : 'N/A';
+                    if (!empty($log['context'])) {
+                        $formatted_log['context'] = json_decode($log['context'], true);
+                    }
+                    $formatted_logs[] = $formatted_log;
+                }
+            }
+            
+            return new WP_REST_Response([
+                'logs' => array_reverse($formatted_logs),
+                'has_more' => count($formatted_logs) === $limit
+            ], 200);
+        } catch (Exception $e) {
+            return new WP_REST_Response([
+                'error' => 'Exception: ' . $e->getMessage(),
+                'logs' => [],
+                'has_more' => false
+            ], 500);
         }
-        
-        return new WP_REST_Response([
-            'logs' => array_reverse($logs),
-            'has_more' => count($logs) === $limit
-        ], 200);
     }
     
     /**
