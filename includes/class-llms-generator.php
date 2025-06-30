@@ -14,6 +14,8 @@ class LLMS_Generator
     private $write_log;
     private $llms_name;
     private $limit = 500;
+    private $batch_size = 100; // Smaller batches for better memory management
+    private $memory_threshold = 134217728; // 128MB threshold
     private ?LLMS_Logger $logger = null;
 
     public function __construct()
@@ -43,6 +45,7 @@ class LLMS_Generator
         
         // Hook for cache population
         add_action('llms_populate_cache', array($this, 'populate_cache_for_existing_posts'));
+        add_action('llms_warm_cache', array($this, 'warm_cache_for_stale_posts'));
 
         // Hook into post updates
         add_action('save_post', array($this, 'handle_post_update'), 10, 3);
@@ -219,6 +222,63 @@ class LLMS_Generator
         }
     }
 
+    /**
+     * Check memory usage and clear caches if needed
+     * @return bool True if memory is available, false if cleanup was needed
+     */
+    private function check_memory_usage(): bool {
+        $memory_usage = memory_get_usage(true);
+        $memory_limit = $this->get_memory_limit();
+        
+        // Log memory usage
+        if ($this->logger) {
+            $this->logger->debug(sprintf(
+                'Memory usage: %s / %s (%.2f%%)',
+                size_format($memory_usage),
+                size_format($memory_limit),
+                ($memory_usage / $memory_limit) * 100
+            ));
+        }
+        
+        // If we're using more than 80% of available memory, clear caches
+        if ($memory_usage > ($memory_limit * 0.8)) {
+            wp_cache_flush();
+            
+            // Force garbage collection
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+            
+            if ($this->logger) {
+                $this->logger->warning('Memory threshold reached, clearing caches');
+            }
+            
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Get PHP memory limit in bytes
+     * @return int
+     */
+    private function get_memory_limit(): int {
+        $memory_limit = ini_get('memory_limit');
+        
+        if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
+            if ($matches[2] == 'M') {
+                return $matches[1] * 1024 * 1024;
+            } else if ($matches[2] == 'K') {
+                return $matches[1] * 1024;
+            } else if ($matches[2] == 'G') {
+                return $matches[1] * 1024 * 1024 * 1024;
+            }
+        }
+        
+        return 134217728; // Default to 128MB
+    }
+    
     /**
      * Get the actual file path where LLMS.txt is stored
      * @return string
@@ -658,6 +718,15 @@ class LLMS_Generator
             $i = 0;
 
             do {
+                // Check memory before processing batch
+                if (!$this->check_memory_usage()) {
+                    if ($this->logger) {
+                        $this->logger->warning('Memory limit reached during generation, continuing with reduced batch size');
+                    }
+                    // Reduce batch size
+                    $this->limit = max(50, intval($this->limit / 2));
+                }
+                
                 $conditions = " WHERE `type` = %s AND (`is_visible`=1 OR `is_visible` IS NULL) AND `status`='publish' ";
                 $params = [
                     $post_type,
@@ -741,10 +810,52 @@ class LLMS_Generator
                             if ($this->settings['include_taxonomies']) {
                                 $taxonomies = get_object_taxonomies($data->type, 'objects');
                                 foreach ($taxonomies as $tax) {
+                                    // Skip private taxonomies if option is enabled
+                                    if (!empty($this->settings['exclude_private_taxonomies']) && !$tax->public) {
+                                        continue;
+                                    }
+                                    
                                     $terms = get_the_terms($data->post_id, $tax->name);
                                     if ($terms && !is_wp_error($terms)) {
                                         $term_names = wp_list_pluck($terms, 'name');
                                         $output .= "- " . $tax->labels->name . ": " . implode(', ', $term_names) . "\n";
+                                    }
+                                }
+                            }
+                            
+                            // Include custom fields if enabled
+                            if (!empty($this->settings['include_custom_fields'])) {
+                                $custom_fields = get_post_meta($data->post_id);
+                                if (!empty($custom_fields)) {
+                                    $public_fields = array();
+                                    foreach ($custom_fields as $key => $values) {
+                                        // Skip private fields (starting with _)
+                                        if (substr($key, 0, 1) === '_') continue;
+                                        
+                                        // Skip known system fields
+                                        if (in_array($key, ['_edit_lock', '_edit_last', '_wp_page_template'])) continue;
+                                        
+                                        // Get first value (most custom fields have single value)
+                                        $value = isset($values[0]) ? $values[0] : '';
+                                        
+                                        // Skip empty values
+                                        if (empty($value)) continue;
+                                        
+                                        // Skip serialized data
+                                        if (is_serialized($value)) continue;
+                                        
+                                        $public_fields[$key] = $value;
+                                    }
+                                    
+                                    if (!empty($public_fields)) {
+                                        $output .= "- Custom Fields:\n";
+                                        foreach ($public_fields as $key => $value) {
+                                            // Truncate long values
+                                            if (strlen($value) > 100) {
+                                                $value = substr($value, 0, 100) . '...';
+                                            }
+                                            $output .= "  - " . esc_html($key) . ": " . esc_html($value) . "\n";
+                                        }
                                     }
                                 }
                             }
@@ -1424,37 +1535,166 @@ class LLMS_Generator
             return;
         }
         
+        // Track start time for performance monitoring
+        $start_time = microtime(true);
+        $processed_count = 0;
+        
+        if ($this->logger) {
+            $this->logger->info('Starting cache population for existing posts');
+        }
+        
         foreach ($this->settings['post_types'] as $post_type) {
             if ($post_type === 'llms_txt') continue;
+            
+            // Use smaller batch size for better memory management
+            $batch_size = min($this->batch_size, 50);
             
             $args = array(
                 'post_type' => $post_type,
                 'post_status' => 'publish',
-                'posts_per_page' => 100,
+                'posts_per_page' => $batch_size,
                 'paged' => 1,
-                'fields' => 'ids'
+                'fields' => 'ids',
+                'no_found_rows' => true, // Performance optimization
+                'update_post_meta_cache' => false, // Skip meta cache
+                'update_post_term_cache' => false, // Skip term cache
             );
             
             $query = new WP_Query($args);
-            $total_pages = $query->max_num_pages;
+            $page = 1;
             
-            for ($page = 1; $page <= $total_pages; $page++) {
-                $args['paged'] = $page;
-                $query = new WP_Query($args);
+            while ($query->have_posts()) {
+                // Check memory usage before processing batch
+                if (!$this->check_memory_usage()) {
+                    if ($this->logger) {
+                        $this->logger->warning('Memory limit approaching, pausing cache population');
+                    }
+                    // Schedule continuation
+                    wp_schedule_single_event(time() + 60, 'llms_populate_cache');
+                    return;
+                }
                 
                 foreach ($query->posts as $post_id) {
                     $post = get_post($post_id);
                     if ($post) {
                         $this->handle_post_update($post_id, $post, false, 'populate');
+                        $processed_count++;
+                        
+                        // Log progress every 100 posts
+                        if ($processed_count % 100 === 0 && $this->logger) {
+                            $this->logger->info(sprintf(
+                                'Processed %d posts, memory usage: %s',
+                                $processed_count,
+                                size_format(memory_get_usage(true))
+                            ));
+                        }
                     }
                 }
                 
-                // Free up memory
+                // Free up memory after each batch
                 wp_reset_postdata();
+                wp_cache_flush();
+                
+                // Next page
+                $page++;
+                $args['paged'] = $page;
+                $query = new WP_Query($args);
             }
+        }
+        
+        // Log completion
+        $execution_time = microtime(true) - $start_time;
+        if ($this->logger) {
+            $this->logger->info(sprintf(
+                'Cache population completed: %d posts processed in %.2f seconds, peak memory: %s',
+                $processed_count,
+                $execution_time,
+                size_format(memory_get_peak_usage(true))
+            ));
         }
         
         // Regenerate the file after populating cache
         wp_schedule_single_event(time() + 10, 'llms_update_llms_file_cron');
+    }
+    
+    /**
+     * Warm cache by updating stale entries
+     */
+    public function warm_cache_for_stale_posts() {
+        global $wpdb;
+        
+        $table_cache = $wpdb->prefix . 'llms_txt_cache';
+        
+        // Check if table exists
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SHOW TABLES LIKE %s",
+            $table_cache
+        ));
+        
+        if ($table_exists !== $table_cache) {
+            $this->log_error('Cache table does not exist when trying to warm cache');
+            return;
+        }
+        
+        // Track start time
+        $start_time = microtime(true);
+        $updated_count = 0;
+        
+        if ($this->logger) {
+            $this->logger->info('Starting cache warming for stale posts');
+        }
+        
+        // Find stale cache entries
+        $stale_posts = $wpdb->get_results($wpdb->prepare(
+            "SELECT c.post_id, p.post_type 
+             FROM {$table_cache} c 
+             LEFT JOIN {$wpdb->posts} p ON c.post_id = p.ID 
+             WHERE p.post_modified > c.modified 
+             AND p.post_status = 'publish'
+             AND p.post_type IN (" . implode(',', array_fill(0, count($this->settings['post_types']), '%s')) . ")
+             LIMIT %d",
+            array_merge($this->settings['post_types'], [100])
+        ));
+        
+        foreach ($stale_posts as $stale_post) {
+            // Check memory usage
+            if (!$this->check_memory_usage()) {
+                if ($this->logger) {
+                    $this->logger->warning('Memory limit approaching during cache warming');
+                }
+                // Schedule continuation
+                wp_schedule_single_event(time() + 60, 'llms_warm_cache');
+                break;
+            }
+            
+            $post = get_post($stale_post->post_id);
+            if ($post) {
+                $this->handle_post_update($stale_post->post_id, $post, false, 'warm');
+                $updated_count++;
+                
+                // Log progress every 20 posts
+                if ($updated_count % 20 === 0 && $this->logger) {
+                    $this->logger->info(sprintf(
+                        'Warmed %d stale cache entries',
+                        $updated_count
+                    ));
+                }
+            }
+        }
+        
+        // Log completion
+        $execution_time = microtime(true) - $start_time;
+        if ($this->logger) {
+            $this->logger->info(sprintf(
+                'Cache warming completed: %d entries updated in %.2f seconds',
+                $updated_count,
+                $execution_time
+            ));
+        }
+        
+        // If we updated any posts, regenerate the file
+        if ($updated_count > 0) {
+            wp_schedule_single_event(time() + 10, 'llms_update_llms_file_cron');
+        }
     }
 }

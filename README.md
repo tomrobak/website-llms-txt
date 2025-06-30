@@ -1,53 +1,8 @@
 # WP LLMs.txt Plugin
 
-**Version: 2.1.3** | **Last Updated: 2025-06-30**
+**Version: 2.1.5** | **Last Updated: 2025-06-30**
 
 A WordPress plugin that generates LLMS.txt files for AI/LLM content consumption with SEO plugin integration. Originally created by Website LLM, forked and maintained by Tom Robak.
-
-## ✨ Recent Updates
-
-### Progress Tracking Fix (2025-06-30 - v2.1.3)
-- **Fixed Progress Tracking** - Now properly works with REST API
-- **Fixed Generation** - Starts immediately via REST endpoint
-- **Added Logs Tab** - View generation logs in admin interface
-- **Better UX** - Auto-starts generation when progress page loads
-
-### Architecture Improvements (2025-06-30 - v2.1.2)
-- **Fixed REST API** - Centralized registration to prevent timing issues
-- **Fixed Logger** - Singleton pattern prevents duplicate instances
-- **Better Organization** - Dedicated REST API handler class
-- **Improved Stability** - Null checks and error handling throughout
-
-### Critical Bug Fixes (2025-06-30 - v2.1.1)
-- **Fixed REST API** - Resolved 404 errors on endpoints
-- **Fixed Empty Cache** - Auto-populates cache when empty
-- **Fixed Post Detection** - Now finds all published posts
-- **Better Error Handling** - Improved logging and checks
-
-### Critical Architecture Fixes (2025-06-30 - v2.1.0)
-- **Fixed Table Creation** - Moved to activation hook for proper timing
-- **Fixed File Writing** - Proper overwrite logic on first write
-- **Added Cache Population** - New mechanism for existing posts
-- **Enhanced Admin UI** - Cache management section with statistics
-
-### Additional Fixes (2025-06-30 - v2.0.2)
-- **Enhanced Debugging** - Added comprehensive logging for troubleshooting
-- **Fixed Edge Cases** - Resolved issues with max_posts limit and cache queries
-- **SQL Improvements** - Added post_status check to content updates
-
-### Critical Bug Fixes (2025-06-30 - v2.0.1)
-- **Fixed Fatal Error** - Resolved TypeError in update checker when WordPress passes false
-- **Fixed Content Generation** - Corrected empty llms.txt file generation issue
-- **Improved Content Extraction** - Added fallback for empty content scenarios
-- **Enhanced Debugging** - Better error logging for troubleshooting
-
-### Major UI/UX Redesign (2025-06-19 - v2.0.0)
-- **Modern shadcn-inspired interface** - Complete redesign with professional, clean UI components
-- **Fixed duplicate checkboxes** - Resolved HTML/CSS conflicts causing non-functional form elements  
-- **Removed drag & drop** - Simplified file upload with standard, reliable input method
-- **Unified design system** - Consistent styling across all plugin interfaces
-- **Better UX** - Improved navigation with tab-based organization and visual feedback
-- **Maintained community features** - WPLove.co section preserved as community-focused element
 
 ## 🚀 Features
 
@@ -60,7 +15,6 @@ A WordPress plugin that generates LLMS.txt files for AI/LLM content consumption 
 - **WooCommerce support** - Include product data in AI-friendly format
 
 ### Modern Admin Interface
-- **shadcn-inspired design** - Professional, modern UI components
 - **Tab-based navigation** - Organized settings across Content, Management, Import/Export, and Debug sections
 - **Responsive design** - Works seamlessly on all screen sizes
 - **Dark mode support** - Automatic system preference detection

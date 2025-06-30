@@ -92,6 +92,19 @@ if (isset($_GET['cache_populated']) && $_GET['cache_populated'] === 'true' &&
     }
 }
 
+// Check for cache warmed
+if (isset($_GET['cache_warmed']) && $_GET['cache_warmed'] === 'true' &&
+    isset($_GET['_wpnonce'])) {
+    $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce']));
+    if (wp_verify_nonce($nonce, 'llms_cache_warmed')) {
+        $notices[] = array(
+            'type' => 'success',
+            'message' => __('🔥 Cache warming scheduled! Stale cache entries will be updated in the background.', 'wp-llms-txt'),
+            'dismissible' => true
+        );
+    }
+}
+
 // Check for errors
 if (isset($_GET['error'])) {
     $error_code = sanitize_text_field($_GET['error']);
@@ -244,6 +257,7 @@ foreach ($notices as $notice) {
             <div class="llms-card-content">
                 <form method="post" action="options.php" id="llms-settings-form">
                     <?php settings_fields('llms_generator_settings'); ?>
+                    <input type="hidden" id="active-tab" name="active_tab" value="content" />
                     
                     <div class="llms-form-group">
                         <label class="llms-label"><?php esc_html_e('Post Types', 'wp-llms-txt'); ?></label>
@@ -425,29 +439,69 @@ foreach ($notices as $notice) {
         <div class="llms-card">
             <div class="llms-card-header">
                 <h2 class="llms-card-title">🔄 Cache Management</h2>
-                <p class="llms-card-description">Populate cache for existing posts</p>
+                <p class="llms-card-description">Manage content cache for better performance</p>
             </div>
             <div class="llms-card-content">
-                <p><?php esc_html_e('Populate the cache table with all existing posts. This is useful after initial installation or if the cache is empty.', 'wp-llms-txt'); ?></p>
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="populate_llms_cache">
-                    <?php wp_nonce_field('populate_llms_cache', 'populate_llms_cache_nonce'); ?>
-                    <button type="submit" class="llms-button secondary">
-                        📦 <?php esc_html_e('Populate Cache', 'wp-llms-txt'); ?>
-                    </button>
-                </form>
+                <p><?php esc_html_e('The plugin uses a database cache to improve generation performance. Use these tools to manage the cache.', 'wp-llms-txt'); ?></p>
+                
+                <div class="llms-grid cols-2" style="margin-top: 1rem;">
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="populate_llms_cache">
+                        <?php wp_nonce_field('populate_llms_cache', 'populate_llms_cache_nonce'); ?>
+                        <button type="submit" class="llms-button secondary" style="width: 100%;">
+                            📦 <?php esc_html_e('Populate Cache', 'wp-llms-txt'); ?>
+                        </button>
+                        <p class="llms-text-xs llms-text-muted" style="margin-top: 0.5rem;">
+                            <?php esc_html_e('Add all existing posts to cache', 'wp-llms-txt'); ?>
+                        </p>
+                    </form>
+                    
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="warm_llms_cache">
+                        <?php wp_nonce_field('warm_llms_cache', 'warm_llms_cache_nonce'); ?>
+                        <button type="submit" class="llms-button secondary" style="width: 100%;">
+                            🔥 <?php esc_html_e('Warm Cache', 'wp-llms-txt'); ?>
+                        </button>
+                        <p class="llms-text-xs llms-text-muted" style="margin-top: 0.5rem;">
+                            <?php esc_html_e('Update stale cache entries', 'wp-llms-txt'); ?>
+                        </p>
+                    </form>
+                </div>
+                
                 <?php
                 // Show cache stats
                 global $wpdb;
                 $table_cache = $wpdb->prefix . 'llms_txt_cache';
                 $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$table_cache}");
+                $stale_count = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$table_cache} c 
+                     LEFT JOIN {$wpdb->posts} p ON c.post_id = p.ID 
+                     WHERE p.post_modified > c.modified 
+                     AND p.post_status = 'publish'"
+                ));
+                
                 if ($cache_count !== null) {
-                    echo '<p class="llms-text-sm llms-text-muted" style="margin-top: 1rem;">';
+                    echo '<div class="llms-stats" style="margin-top: 1.5rem; padding: 1rem; background: #f1f5f9; border-radius: 0.5rem;">';
+                    echo '<h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; font-weight: 600;">Cache Statistics</h4>';
+                    echo '<div class="llms-grid cols-2" style="gap: 1rem;">';
+                    echo '<div>';
+                    echo '<p class="llms-text-sm llms-text-muted" style="margin: 0;">';
                     printf(
-                        esc_html__('Cache currently contains %s posts.', 'wp-llms-txt'),
+                        esc_html__('Total cached posts: %s', 'wp-llms-txt'),
                         '<strong>' . number_format($cache_count) . '</strong>'
                     );
                     echo '</p>';
+                    echo '</div>';
+                    echo '<div>';
+                    echo '<p class="llms-text-sm llms-text-muted" style="margin: 0;">';
+                    printf(
+                        esc_html__('Stale cache entries: %s', 'wp-llms-txt'),
+                        '<strong>' . number_format($stale_count ?: 0) . '</strong>'
+                    );
+                    echo '</p>';
+                    echo '</div>';
+                    echo '</div>';
+                    echo '</div>';
                 }
                 ?>
             </div>
@@ -700,7 +754,23 @@ jQuery(document).ready(function($) {
         // Update panel visibility
         $('.llms-tab-panel').removeClass('active');
         $('#' + targetTab + '-tab').addClass('active');
+        
+        // Update hidden field
+        $('#active-tab').val(targetTab);
+        
+        // Store in localStorage
+        localStorage.setItem('llms_active_tab', targetTab);
     });
+    
+    // Restore active tab from URL or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = urlParams.get('tab');
+    const tabFromStorage = localStorage.getItem('llms_active_tab');
+    const activeTab = tabFromUrl || tabFromStorage || 'content';
+    
+    if (activeTab !== 'content') {
+        $('.llms-tab-button[data-tab="' + activeTab + '"]').click();
+    }
 
     // Handle post type checkboxes
     $('.llms-post-type-item input[type="checkbox"]').on('change', function() {
@@ -719,6 +789,14 @@ jQuery(document).ready(function($) {
             e.preventDefault();
             alert('<?php esc_html_e('Please select at least one post type.', 'wp-llms-txt'); ?>');
             return false;
+        }
+    });
+    
+    // Add active tab to all forms before submission
+    $('form').on('submit', function() {
+        const activeTab = $('.llms-tab-button.active').data('tab') || 'content';
+        if (!$(this).find('input[name="active_tab"]').length) {
+            $(this).append('<input type="hidden" name="active_tab" value="' + activeTab + '">');
         }
     });
 

@@ -31,6 +31,7 @@ class LLMS_Core {
         add_action('admin_post_clear_error_log', [$this, 'handle_clear_error_log']);
         add_action('admin_post_generate_llms_file', [$this, 'handle_generate_file']);
         add_action('admin_post_populate_llms_cache', [$this, 'handle_populate_cache']);
+        add_action('admin_post_warm_llms_cache', [$this, 'handle_warm_cache']);
         
         // Handle import/export
         add_action('admin_post_llms_export_settings', [$this, 'handle_export_settings']);
@@ -41,6 +42,9 @@ class LLMS_Core {
 
         // Register settings
         add_action('admin_init', [$this, 'register_settings']);
+        
+        // Handle settings redirect
+        add_filter('wp_redirect', [$this, 'modify_settings_redirect'], 10, 2);
 
         // Add required scripts for admin
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
@@ -206,6 +210,22 @@ class LLMS_Core {
 
         return $clean;
     }
+    
+    /**
+     * Modify settings redirect to preserve tab
+     */
+    public function modify_settings_redirect(string $location, int $status): string {
+        // Check if this is our settings page redirect
+        if (strpos($location, 'page=llms-file-manager') !== false && 
+            strpos($location, 'settings-updated=true') !== false &&
+            !empty($_POST['active_tab'])) {
+            
+            $tab = sanitize_key($_POST['active_tab']);
+            $location = add_query_arg('tab', $tab, $location);
+        }
+        
+        return $location;
+    }
 
     public function enqueue_admin_scripts(string $hook): void {
         if (!in_array($hook, ['tools_page_llms-file-manager', 'toplevel_page_llms-file-manager'])) {
@@ -321,11 +341,17 @@ class LLMS_Core {
         wp_schedule_single_event(time() + 2, 'llms_update_llms_file_cron');
 
 
-        wp_safe_redirect(add_query_arg(array(
+        $redirect_args = array(
             'page' => 'llms-file-manager',
             'cache_cleared' => 'true',
             '_wpnonce' => wp_create_nonce('llms_cache_cleared')
-        ), admin_url('admin.php')));
+        );
+        
+        if (!empty($_POST['active_tab'])) {
+            $redirect_args['tab'] = sanitize_key($_POST['active_tab']);
+        }
+        
+        wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
         exit;
     }
     
@@ -359,11 +385,42 @@ class LLMS_Core {
         wp_schedule_single_event(time() + 2, 'llms_populate_cache');
         
         // Redirect back with success message
-        wp_safe_redirect(add_query_arg(array(
+        $redirect_args = array(
             'page' => 'llms-file-manager',
             'cache_populated' => 'true',
             '_wpnonce' => wp_create_nonce('llms_cache_populated')
-        ), admin_url('admin.php')));
+        );
+        
+        if (!empty($_POST['active_tab'])) {
+            $redirect_args['tab'] = sanitize_key($_POST['active_tab']);
+        }
+        
+        wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
+        exit;
+    }
+    
+    public function handle_warm_cache(): void {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+
+        check_admin_referer('warm_llms_cache', 'warm_llms_cache_nonce');
+        
+        // Schedule cache warming
+        wp_schedule_single_event(time() + 2, 'llms_warm_cache');
+        
+        // Redirect back with success message
+        $redirect_args = array(
+            'page' => 'llms-file-manager',
+            'cache_warmed' => 'true',
+            '_wpnonce' => wp_create_nonce('llms_cache_warmed')
+        );
+        
+        if (!empty($_POST['active_tab'])) {
+            $redirect_args['tab'] = sanitize_key($_POST['active_tab']);
+        }
+        
+        wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
         exit;
     }
     
@@ -398,12 +455,14 @@ class LLMS_Core {
         wp_schedule_single_event(time() + 1, 'llms_update_llms_file_cron');
         
         // Redirect with progress ID
-        wp_safe_redirect(add_query_arg(array(
+        $redirect_args = array(
             'page' => 'llms-file-manager',
             'progress' => $progress_id,
-            'tab' => 'management',
+            'tab' => !empty($_POST['active_tab']) ? sanitize_key($_POST['active_tab']) : 'management',
             '_wpnonce' => wp_create_nonce('llms_progress_' . $progress_id)
-        ), admin_url('admin.php')));
+        );
+        
+        wp_safe_redirect(add_query_arg($redirect_args, admin_url('admin.php')));
         exit;
     }
 
