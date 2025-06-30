@@ -33,4 +33,22 @@ jQuery(document).ready(function($) {
         $sortable.find('.sortable-item:not(.active)').appendTo($sortable);
         return true;
     });
+    
+    // Add visual feedback when generation button is clicked
+    $('form[action*="admin-post.php"]').on('submit', function() {
+        const $form = $(this);
+        const action = $form.find('input[name="action"]').val();
+        
+        if (action === 'generate_llms_file') {
+            const $button = $form.find('button[type="submit"]');
+            const originalText = $button.html();
+            
+            // Disable button and show loading state
+            $button.prop('disabled', true);
+            $button.html('⏳ Generating... Please wait');
+            
+            // Add loading class for styling
+            $button.addClass('llms-button-loading');
+        }
+    });
 });

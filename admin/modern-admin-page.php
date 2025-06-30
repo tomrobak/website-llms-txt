@@ -459,6 +459,7 @@ foreach ($notices as $notice) {
                     </ul>
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="generate_llms_file">
+                        <input type="hidden" name="active_tab" value="management">
                         <?php wp_nonce_field('generate_llms_file', 'generate_llms_file_nonce'); ?>
                         <button type="submit" class="llms-button primary">
                             🔄 <?php esc_html_e('Generate LLMS Files', 'wp-llms-txt'); ?>

@@ -196,25 +196,26 @@ class LLMS_REST_API {
             return new WP_REST_Response(['error' => 'Generation already running', 'progress_id' => $progress_id], 409);
         }
         
-        // Get generator instance
-        $generator = new LLMS_Generator();
+        // Schedule generation to run in background
+        wp_clear_scheduled_hook('llms_update_llms_file_cron');
+        wp_schedule_single_event(time() + 1, 'llms_update_llms_file_cron');
         
-        // Set max execution time for long operations
-        @set_time_limit(300);
+        // Update status to running
+        $wpdb->update(
+            $wpdb->prefix . 'llms_txt_progress',
+            [
+                'status' => 'running',
+                'updated_at' => current_time('mysql')
+            ],
+            ['id' => $progress_id],
+            ['%s', '%s'],
+            ['%s']
+        );
         
-        // Run generation
-        try {
-            $generator->update_llms_file();
-            return new WP_REST_Response([
-                'success' => true,
-                'message' => 'Generation completed',
-                'progress_id' => $progress_id
-            ], 200);
-        } catch (Exception $e) {
-            return new WP_REST_Response([
-                'error' => 'Generation failed: ' . $e->getMessage(),
-                'progress_id' => $progress_id
-            ], 500);
-        }
+        return new WP_REST_Response([
+            'success' => true,
+            'message' => 'Generation started',
+            'progress_id' => $progress_id
+        ], 200);
     }
 }

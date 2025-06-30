@@ -56,6 +56,13 @@ class LLMSProgressTracker {
         // Auto-start if progress ID is present
         const progressId = this.getProgressIdFromDOM();
         if (progressId) {
+            // Ensure progress section is visible
+            this.showProgressUI();
+            
+            // Check if generation needs to be started
+            this.checkAndStartGeneration(progressId);
+            
+            // Start tracking
             this.startTracking(progressId);
         }
     }
@@ -63,6 +70,24 @@ class LLMSProgressTracker {
     getProgressIdFromDOM() {
         const elem = document.querySelector('[data-progress-id]');
         return elem ? elem.dataset.progressId : null;
+    }
+    
+    async checkAndStartGeneration(progressId) {
+        try {
+            // Check current progress status
+            const data = await this.apiRequest(`/progress/${progressId}`);
+            
+            // If status is pending, start the generation
+            if (data.status === 'pending') {
+                console.log('Starting generation process...');
+                await this.apiRequest('/generate/start', {
+                    method: 'POST',
+                    body: JSON.stringify({ progress_id: progressId })
+                });
+            }
+        } catch (error) {
+            console.error('Failed to start generation:', error);
+        }
     }
     
     async apiRequest(endpoint, options = {}) {
@@ -89,14 +114,24 @@ class LLMSProgressTracker {
         this.progressId = progressId;
         this.showProgressUI();
         
-        // Start polling for progress
-        this.pollInterval = setInterval(() => this.updateProgress(), 1000);
+        // Set initial state
+        if (this.progressBar) {
+            this.progressBar.style.width = '0%';
+        }
+        if (this.progressText) {
+            this.progressText.textContent = 'Initializing...';
+        }
+        
+        // Start polling for progress with slight delay for smooth animation
+        setTimeout(() => {
+            this.pollInterval = setInterval(() => this.updateProgress(), 1000);
+            this.updateProgress();
+        }, 100);
         
         // Start polling for logs
         this.logPollInterval = setInterval(() => this.updateLogs(), 2000);
         
-        // Initial updates
-        this.updateProgress();
+        // Initial log update
         this.updateLogs();
     }
     
@@ -124,19 +159,21 @@ class LLMSProgressTracker {
                     </div>
                     <div class="llms-progress-stat">
                         <span class="label">Current:</span>
-                        <span class="value">${data.current_post_title || 'Initializing...'}</span>
+                        <span class="value" title="${data.current_post_title || 'Initializing...'}">${this.truncateText(data.current_post_title || 'Initializing...', 40)}</span>
                     </div>
                     <div class="llms-progress-stat">
-                        <span class="label">Elapsed:</span>
+                        <span class="label">Runtime:</span>
                         <span class="value">${data.elapsed_time}</span>
                     </div>
                 `;
                 
-                if (data.estimated_remaining) {
+                // Show rate instead of estimated time
+                if (data.current_item > 0 && data.elapsed_seconds > 0) {
+                    const rate = (data.current_item / data.elapsed_seconds).toFixed(1);
                     details += `
                         <div class="llms-progress-stat">
-                            <span class="label">Remaining:</span>
-                            <span class="value">${data.estimated_remaining}</span>
+                            <span class="label">Speed:</span>
+                            <span class="value">${rate} posts/sec</span>
                         </div>
                     `;
                 }
@@ -320,17 +357,65 @@ class LLMSProgressTracker {
     
     showCompletionMessage(status) {
         const messages = {
-            'completed': '✅ Generation completed successfully!',
-            'cancelled': '❌ Generation was cancelled.',
-            'error': '⚠️ Generation encountered an error.'
+            'completed': {
+                title: '✅ Generation Completed Successfully!',
+                message: 'Your LLMS files have been generated and are ready for AI crawlers.',
+                actions: true
+            },
+            'cancelled': {
+                title: '❌ Generation Cancelled',
+                message: 'The file generation process was cancelled by user request.',
+                actions: false
+            },
+            'error': {
+                title: '⚠️ Generation Error',
+                message: 'An error occurred during generation. Please check the logs for details.',
+                actions: false
+            }
         };
         
-        const message = messages[status] || `Generation ${status}`;
+        const config = messages[status] || { title: `Generation ${status}`, message: '', actions: false };
         
-        // You can customize this to show a nice notification
+        // Create detailed completion card
+        const completionCard = document.createElement('div');
+        completionCard.className = 'llms-card llms-completion-card llms-completion-' + status;
+        completionCard.innerHTML = `
+            <div class="llms-card-header">
+                <h3 class="llms-card-title">${config.title}</h3>
+            </div>
+            <div class="llms-card-content">
+                <p>${config.message}</p>
+                ${config.actions ? `
+                    <div class="llms-completion-actions">
+                        <a href="${window.location.origin}/llms.txt" target="_blank" class="llms-button primary">
+                            👁️ View Standard File
+                        </a>
+                        <a href="${window.location.origin}/llms-full.txt" target="_blank" class="llms-button primary">
+                            📚 View Full File
+                        </a>
+                        <button type="button" class="llms-button secondary" onclick="location.reload()">
+                            🔄 Back to Dashboard
+                        </button>
+                    </div>
+                ` : `
+                    <button type="button" class="llms-button primary" onclick="location.reload()">
+                        🔄 Back to Dashboard
+                    </button>
+                `}
+            </div>
+        `;
+        
+        // Replace progress section with completion card
+        const progressSection = document.querySelector('.llms-progress-section');
+        if (progressSection) {
+            progressSection.innerHTML = '';
+            progressSection.appendChild(completionCard);
+        }
+        
+        // Also show a temporary notification
         const notification = document.createElement('div');
         notification.className = 'llms-notification llms-notification-' + status;
-        notification.textContent = message;
+        notification.textContent = config.title;
         document.body.appendChild(notification);
         
         setTimeout(() => notification.remove(), 5000);
@@ -340,6 +425,11 @@ class LLMSProgressTracker {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+    
+    truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength - 3) + '...';
     }
 }
 

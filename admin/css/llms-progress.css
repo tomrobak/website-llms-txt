@@ -330,6 +330,54 @@
     color: #92400e;
 }
 
+/* Completion Card */
+.llms-completion-card {
+    animation: llms-fade-in 0.5s ease;
+}
+
+@keyframes llms-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.llms-completion-card .llms-card-title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.llms-completion-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.llms-completion-completed .llms-card-header {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+}
+
+.llms-completion-cancelled .llms-card-header {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+}
+
+.llms-completion-error .llms-card-header {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+}
+
+/* Progress Bar Smooth Animation */
+.llms-progress-bar {
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .llms-progress-details {
@@ -343,5 +391,20 @@
     
     .llms-progress-controls {
         flex-wrap: wrap;
+    }
+    
+    .llms-notification {
+        right: 1rem;
+        left: 1rem;
+        top: 1rem;
+    }
+    
+    .llms-completion-actions {
+        flex-direction: column;
+    }
+    
+    .llms-completion-actions .llms-button {
+        width: 100%;
+        text-align: center;
     }
 }

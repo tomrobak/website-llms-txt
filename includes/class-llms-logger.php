@@ -257,6 +257,7 @@ class LLMS_Logger {
         $started = strtotime($progress['started_at']);
         $elapsed = time() - $started;
         $progress['elapsed_time'] = $this->format_time($elapsed);
+        $progress['elapsed_seconds'] = $elapsed;
         
         // Estimate remaining time
         if ($progress['current_item'] > 0 && $progress['status'] === 'running') {
