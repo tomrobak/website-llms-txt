@@ -4,13 +4,21 @@ Tags: ai, llms, seo, sitemap, artificial-intelligence, chatgpt, claude, llm, mac
 Requires at least: 6.7
 Tested up to: 6.7
 Requires PHP: 8.3
-Stable tag: 2.1.2
+Stable tag: 2.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Automatically generate llms.txt files for AI systems like ChatGPT, Claude & Perplexity. A supercharged fork with security fixes, performance boosts & WooCommerce support.
 
 == Changelog ==
+
+= 2.1.3 =
+* Fixed: Progress tracking now works properly with REST API
+* Fixed: Generation process starts immediately via REST endpoint
+* Added: Logs tab in admin interface for viewing generation logs
+* Added: Initial progress entry creation to prevent 404 errors
+* Added: Auto-start generation when progress page is loaded
+* Improved: Better error handling for generation process
 
 = 2.1.2 =
 * Fixed: REST API architecture - centralized registration to prevent timing issues

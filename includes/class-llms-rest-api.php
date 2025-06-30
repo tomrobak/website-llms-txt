@@ -95,6 +95,13 @@ class LLMS_REST_API {
             },
             'permission_callback' => '__return_true'
         ]);
+        
+        // Start generation endpoint
+        register_rest_route('wp-llms-txt/v1', '/generate/start', [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'start_generation'],
+            'permission_callback' => [$this, 'check_permission']
+        ]);
     }
     
     /**
@@ -150,5 +157,47 @@ class LLMS_REST_API {
         }
         
         return new WP_REST_Response(['error' => 'Logger not available'], 500);
+    }
+    
+    /**
+     * Start generation process
+     */
+    public function start_generation(WP_REST_Request $request): WP_REST_Response {
+        // Get progress ID from transient
+        $progress_id = get_transient('llms_current_progress_id');
+        if (!$progress_id) {
+            return new WP_REST_Response(['error' => 'No generation pending'], 400);
+        }
+        
+        // Check if already running
+        global $wpdb;
+        $status = $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM {$wpdb->prefix}llms_txt_progress WHERE id = %s",
+            $progress_id
+        ));
+        
+        if ($status === 'running') {
+            return new WP_REST_Response(['error' => 'Generation already running'], 409);
+        }
+        
+        // Get generator instance
+        $generator = new LLMS_Generator();
+        
+        // Set max execution time for long operations
+        @set_time_limit(300);
+        
+        // Run generation
+        try {
+            $generator->update_llms_file();
+            return new WP_REST_Response([
+                'success' => true,
+                'message' => 'Generation completed',
+                'progress_id' => $progress_id
+            ], 200);
+        } catch (Exception $e) {
+            return new WP_REST_Response([
+                'error' => 'Generation failed: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

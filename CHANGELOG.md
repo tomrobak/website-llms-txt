@@ -5,6 +5,32 @@ All notable changes to WP LLMs.txt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.3] - 2025-06-30
+
+### 🐛 Progress Tracking and Generation Fix
+
+This patch fixes the progress tracking system and ensures generation starts properly.
+
+### Fixed
+
+- **Progress Tracking**: REST API endpoints now work correctly with progress IDs
+- **Generation Start**: File generation now starts immediately via REST endpoint instead of relying on WP-Cron
+- **404 Errors**: Initial progress entry is created in database to prevent endpoint not found errors
+- **Auto-start**: Generation automatically starts when progress page is loaded
+
+### Added
+
+- **Logs Tab**: New tab in admin interface to view generation logs
+- **Start Generation Endpoint**: REST endpoint `/wp-json/wp-llms-txt/v1/generate/start` to trigger generation
+- **Initial Progress Entry**: Creates database entry when generation is initiated
+- **Auto-trigger**: JavaScript automatically calls generation endpoint when progress page loads
+
+### Improved
+
+- **Error Handling**: Better error messages when generation fails
+- **User Experience**: No manual intervention needed - generation starts automatically
+- **Debugging**: Logs tab provides visibility into generation process
+
 ## [2.1.2] - 2025-06-30
 
 ### 🏗️ Architecture Improvements

@@ -809,6 +809,31 @@ jQuery(document).ready(function($) {
         loadLogs();
     });
     
+    // Auto-start generation if progress ID is present
+    const progressElement = document.querySelector('[data-progress-id]');
+    if (progressElement && progressElement.dataset.progressId) {
+        const progressId = progressElement.dataset.progressId;
+        console.log('Starting generation for progress ID:', progressId);
+        
+        // Start the generation process via REST API
+        $.ajax({
+            url: '<?php echo esc_url(rest_url('wp-llms-txt/v1/generate/start')); ?>',
+            method: 'POST',
+            headers: {
+                'X-WP-Nonce': '<?php echo wp_create_nonce('wp_rest'); ?>'
+            },
+            success: function(response) {
+                console.log('Generation started:', response);
+            },
+            error: function(xhr) {
+                console.error('Failed to start generation:', xhr);
+                if (xhr.status === 409) {
+                    console.log('Generation already running');
+                }
+            }
+        });
+    }
+    
     // Refresh logs button
     $('#refresh-logs').on('click', function() {
         loadLogs();

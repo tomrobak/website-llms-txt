@@ -46,6 +46,9 @@ class LLMS_Core {
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
 
         add_action('wp_head', [$this, 'wp_head']);
+        
+        // AJAX action for triggering generation
+        add_action('wp_ajax_llms_trigger_generation', [$this, 'ajax_trigger_generation']);
     }
 
 
@@ -377,8 +380,22 @@ class LLMS_Core {
         // Store progress ID in transient for 1 hour
         set_transient('llms_current_progress_id', $progress_id, HOUR_IN_SECONDS);
         
+        // Create initial progress entry in database
+        global $wpdb;
+        $wpdb->insert(
+            $wpdb->prefix . 'llms_txt_progress',
+            [
+                'id' => $progress_id,
+                'status' => 'pending',
+                'current_item' => 0,
+                'total_items' => 100, // Will be updated when generation starts
+                'started_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql')
+            ]
+        );
+        
         // Schedule the generation to run in background
-        wp_schedule_single_event(time() + 2, 'llms_update_llms_file_cron');
+        wp_schedule_single_event(time() + 1, 'llms_update_llms_file_cron');
         
         // Redirect with progress ID
         wp_safe_redirect(add_query_arg(array(
