@@ -693,59 +693,58 @@ class LLMS_Generator
     
     /**
      * Generate standard sections for llms.txt
+     * According to llmstxt.org spec - includes ALL posts and pages
      */
     private function generate_standard_sections()
     {
         global $wpdb;
         $table_cache = $wpdb->prefix . 'llms_txt_cache';
         
-        // Key Pages Section
-        $output = "## Key Pages\n\n";
+        // Pages Section - ALL pages
+        $output = "## Pages\n\n";
         
-        // Get important pages
-        $pages = $wpdb->get_results($wpdb->prepare(
-            "SELECT post_id, title, link, meta FROM $table_cache 
+        // Get ALL pages (no limit)
+        $pages = $wpdb->get_results(
+            "SELECT post_id, title, link, meta, content FROM $table_cache 
              WHERE type = 'page' AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
-             ORDER BY published DESC LIMIT %d",
-            10
-        ));
+             ORDER BY title ASC"
+        );
         
         if (!empty($pages)) {
             foreach ($pages as $page) {
-                $description = $page->meta ?: 'Page content';
+                $description = $page->meta ?: wp_trim_words($page->content, 30);
                 $output .= "- [" . esc_html($page->title) . "](" . esc_url($page->link) . "): " . 
-                          wp_trim_words($description, 15) . "\n";
+                          wp_trim_words($description, 20) . "\n";
             }
             $output .= "\n";
         }
         
         $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
         
-        // Recent Content Section
-        $output = "## Recent Content\n\n";
+        // Posts Section - ALL posts
+        $output = "## Posts\n\n";
         
-        // Get recent posts
-        $posts = $wpdb->get_results($wpdb->prepare(
-            "SELECT post_id, title, link, meta, type FROM $table_cache 
+        // Get ALL posts (no limit)
+        $posts = $wpdb->get_results(
+            "SELECT post_id, title, link, meta, content, type FROM $table_cache 
              WHERE type IN ('post', 'product') AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
-             ORDER BY published DESC LIMIT %d",
-            20
-        ));
+             ORDER BY published DESC"
+        );
         
         if (!empty($posts)) {
             foreach ($posts as $post) {
-                $description = $post->meta ?: 'Content';
+                $description = $post->meta ?: wp_trim_words($post->content, 30);
                 $output .= "- [" . esc_html($post->title) . "](" . esc_url($post->link) . "): " . 
-                          wp_trim_words($description, 15) . "\n";
+                          wp_trim_words($description, 20) . "\n";
             }
             $output .= "\n";
         }
         
         $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
         
-        // Categories/Topics Section
+        // Categories/Topics Section - ALL categories
         $output = "## Topics\n\n";
-        $categories = get_categories(['number' => 10, 'orderby' => 'count', 'order' => 'DESC']);
+        $categories = get_categories(['orderby' => 'count', 'order' => 'DESC', 'hide_empty' => true]);
         
         if (!empty($categories)) {
             foreach ($categories as $cat) {
@@ -756,10 +755,26 @@ class LLMS_Generator
         
         $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
         
-        // Optional Section
-        $output = "## Optional\n\n";
-        $output .= "For comprehensive content including full post text, see `/llms-full.txt`\n";
-        $output .= "Generated on: " . date('Y-m-d H:i:s') . "\n";
+        // Tags Section - include tags as well
+        $output = "## Tags\n\n";
+        $tags = get_tags(['orderby' => 'count', 'order' => 'DESC', 'number' => 50]);
+        
+        if (!empty($tags)) {
+            $tag_list = [];
+            foreach ($tags as $tag) {
+                $tag_list[] = esc_html($tag->name) . " (" . $tag->count . ")";
+            }
+            $output .= implode(", ", $tag_list) . "\n\n";
+        }
+        
+        $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
+        
+        // Metadata Section
+        $output = "## Metadata\n\n";
+        $output .= "- Total pages: " . count($pages) . "\n";
+        $output .= "- Total posts: " . count($posts) . "\n";
+        $output .= "- Last updated: " . date('Y-m-d H:i:s') . "\n";
+        $output .= "- Full content available at: /llms-full.txt\n";
         
         $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
     }

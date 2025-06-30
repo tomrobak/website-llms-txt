@@ -216,31 +216,60 @@ echo "\n   ✓ Total posts cached: {$total_cached}\n";
 // 4. Create the files NOW
 echo "\n4. Generating llms.txt files immediately...\n";
 
-// Create standard llms.txt
+// Create standard llms.txt with ALL content
 $file_content = "# " . get_bloginfo('name') . "\n\n";
 $file_content .= "> " . get_bloginfo('description') . "\n\n";
 
-// Add cached content
-$cached_posts = $wpdb->get_results("
-    SELECT title, link, meta, content 
+// Get ALL pages
+$pages = $wpdb->get_results("
+    SELECT title, link, meta, content, type
     FROM {$cache_table} 
-    WHERE is_visible = 1 
-    ORDER BY published DESC 
-    LIMIT 50
+    WHERE type = 'page' AND is_visible = 1 AND status = 'publish'
+    ORDER BY title ASC
 ");
 
-if (!empty($cached_posts)) {
-    $file_content .= "## Recent Content\n\n";
-    
-    foreach ($cached_posts as $post) {
-        $desc = !empty($post->meta) ? $post->meta : wp_trim_words($post->content, 20);
-        $file_content .= "- [{$post->title}]({$post->link}): {$desc}\n";
+if (!empty($pages)) {
+    $file_content .= "## Pages\n\n";
+    foreach ($pages as $page) {
+        $desc = !empty($page->meta) ? $page->meta : wp_trim_words($page->content, 30);
+        $file_content .= "- [{$page->title}]({$page->link}): " . wp_trim_words($desc, 20) . "\n";
     }
-} else {
-    $file_content .= "No content available yet.\n";
+    $file_content .= "\n";
 }
 
-$file_content .= "\nGenerated: " . date('Y-m-d H:i:s') . "\n";
+// Get ALL posts
+$posts = $wpdb->get_results("
+    SELECT title, link, meta, content, type
+    FROM {$cache_table} 
+    WHERE type IN ('post', 'product') AND is_visible = 1 AND status = 'publish'
+    ORDER BY published DESC
+");
+
+if (!empty($posts)) {
+    $file_content .= "## Posts\n\n";
+    foreach ($posts as $post) {
+        $desc = !empty($post->meta) ? $post->meta : wp_trim_words($post->content, 30);
+        $file_content .= "- [{$post->title}]({$post->link}): " . wp_trim_words($desc, 20) . "\n";
+    }
+    $file_content .= "\n";
+}
+
+// Add categories
+$categories = get_categories(['orderby' => 'count', 'order' => 'DESC', 'hide_empty' => true]);
+if (!empty($categories)) {
+    $file_content .= "## Topics\n\n";
+    foreach ($categories as $cat) {
+        $file_content .= "- **{$cat->name}** ({$cat->count} posts)\n";
+    }
+    $file_content .= "\n";
+}
+
+// Add metadata
+$file_content .= "## Metadata\n\n";
+$file_content .= "- Total pages: " . count($pages) . "\n";
+$file_content .= "- Total posts: " . count($posts) . "\n";
+$file_content .= "- Last updated: " . date('Y-m-d H:i:s') . "\n";
+$file_content .= "- Full content available at: /llms-full.txt\n";
 
 // Write to root directory
 $llms_path = ABSPATH . 'llms.txt';
