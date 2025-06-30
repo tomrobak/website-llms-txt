@@ -700,15 +700,27 @@ class LLMS_Generator
         global $wpdb;
         $table_cache = $wpdb->prefix . 'llms_txt_cache';
         
-        // Pages Section - ALL pages
-        $output = "## Pages\n\n";
+        // Get configured post types
+        $post_types = $this->settings['post_types'] ?? ['post', 'page'];
+        $max_posts_per_type = $this->settings['max_posts'] ?? 500;
         
-        // Get ALL pages (no limit)
-        $pages = $wpdb->get_results(
-            "SELECT post_id, title, link, meta, content FROM $table_cache 
-             WHERE type = 'page' AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
-             ORDER BY title ASC"
-        );
+        // Filter out pages and posts for separate sections
+        $page_types = array_intersect($post_types, ['page']);
+        $content_types = array_diff($post_types, ['page']);
+        
+        // Pages Section - respecting settings
+        if (!empty($page_types)) {
+            $output = "## Pages\n\n";
+            
+            // Build query for pages with limit
+            $pages = $wpdb->get_results($wpdb->prepare(
+                "SELECT post_id, title, link, meta, content FROM $table_cache 
+                 WHERE type IN ('" . implode("','", array_map('esc_sql', $page_types)) . "') 
+                 AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
+                 ORDER BY title ASC
+                 LIMIT %d",
+                $max_posts_per_type
+            ));
         
         if (!empty($pages)) {
             foreach ($pages as $page) {
@@ -721,15 +733,26 @@ class LLMS_Generator
         
         $this->write_file(mb_convert_encoding($output, 'UTF-8', 'auto'));
         
-        // Posts Section - ALL posts
+        // Posts Section - respecting post types settings
         $output = "## Posts\n\n";
         
-        // Get ALL posts (no limit)
-        $posts = $wpdb->get_results(
-            "SELECT post_id, title, link, meta, content, type FROM $table_cache 
-             WHERE type IN ('post', 'product') AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
-             ORDER BY published DESC"
-        );
+        // Get posts based on configured types and limit
+        if (!empty($content_types)) {
+            // Build safe SQL for configured post types
+            $type_placeholders = implode(',', array_fill(0, count($content_types), '%s'));
+            $query_args = array_merge($content_types, [$max_posts_per_type]);
+            
+            $posts = $wpdb->get_results($wpdb->prepare(
+                "SELECT post_id, title, link, meta, content, type FROM $table_cache 
+                 WHERE type IN ($type_placeholders) 
+                 AND (is_visible=1 OR is_visible IS NULL) AND status='publish'
+                 ORDER BY published DESC
+                 LIMIT %d",
+                ...$query_args
+            ));
+        } else {
+            $posts = [];
+        }
         
         if (!empty($posts)) {
             foreach ($posts as $post) {
@@ -1142,12 +1165,9 @@ class LLMS_Generator
                         // Add post title
                         $output .= "\n### " . esc_html($data->title) . "\n";
 
-                        // Use a higher default if max_words is too low for AI training
-                        $max_words = $this->settings['max_words'] ?? 250;
-                        if ($max_words < 500) {
-                            $max_words = 1000; // Better default for AI training
-                        }
-                        $content = wp_trim_words($data->content, $max_words, '[content truncated due to word limit]');
+                        // Respect the max_words setting from admin panel
+                        $max_words = intval($this->settings['max_words'] ?? 1000);
+                        $content = wp_trim_words($data->content, $max_words, '... [content truncated due to word limit]');
                         
                         // Allow developers to filter the content
                         $content = apply_filters('llms_txt_content', $content, $data->post_id, $post_type);
