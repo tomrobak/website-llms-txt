@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) {
 }
 
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-content-cleaner.php';
+require_once LLMS_PLUGIN_DIR . 'includes/class-llms-generation-lock.php';
 
 class LLMS_Generator
 {
@@ -211,7 +212,7 @@ class LLMS_Generator
     private function init_filesystem()
     {
         global $wp_filesystem;
-        if (empty($wp_filesystem)) {
+        if (!isset($wp_filesystem) || $wp_filesystem === null) {
             require_once(ABSPATH . '/wp-admin/includes/file.php');
             WP_Filesystem();
         }
@@ -221,7 +222,7 @@ class LLMS_Generator
     public function init_generator($force = false)
     {
         // Initialize filesystem if not already done
-        if (empty($this->wp_filesystem)) {
+        if ($this->wp_filesystem === null) {
             $this->init_filesystem();
         }
 
@@ -545,7 +546,7 @@ class LLMS_Generator
                 $joins = " LEFT JOIN {$table_cache} cache ON p.ID = cache.post_id ";
                 $posts = $wpdb->get_results($wpdb->prepare("SELECT p.ID, cache.* FROM {$wpdb->posts} p $joins $conditions ORDER BY p.post_date DESC LIMIT %d OFFSET %d", ...$params));
 
-                if (!empty($posts)) {
+                if (is_array($posts) && count($posts) > 0) {
                     foreach ($posts as $cache_post) {
                         if(!$cache_post->post_id) {
                             $post = get_post($cache_post->ID);
@@ -558,7 +559,7 @@ class LLMS_Generator
                 }
 
                 $offset = $offset + $this->limit;
-            } while (!empty($posts));
+            } while (is_array($posts) && count($posts) > 0);
 
             unset($posts);
 
@@ -873,7 +874,7 @@ class LLMS_Generator
                     \WP_CLI::log($wpdb->prepare("SELECT `post_id`, `overview` FROM $table_cache $conditions ORDER BY `published` DESC LIMIT %d OFFSET %d", ...$params));
                 }
                 $output = '';
-                if (!empty($posts)) {
+                if (is_array($posts) && count($posts) > 0) {
                     
                     // Allow developers to filter max posts per type
                     $max_posts = apply_filters('llms_txt_max_posts_per_type', $this->settings['max_posts'], $post_type);
@@ -996,7 +997,7 @@ class LLMS_Generator
                 }
                 
                 // Debug logging
-                if (empty($posts)) {
+                if (!is_array($posts) || count($posts) === 0) {
                     $this->log_error("No posts found for type: {$post_type}, offset: {$offset}");
                     if ($this->logger) {
                         $this->logger->warning("No posts found for type: {$post_type}, offset: {$offset}");
@@ -1009,7 +1010,7 @@ class LLMS_Generator
                 }
                 
                 $output = '';
-                if (!empty($posts)) {
+                if (is_array($posts) && count($posts) > 0) {
                     
                     // Allow developers to filter max posts per type
                     $max_posts = apply_filters('llms_txt_max_posts_per_type', $this->settings['max_posts'], $post_type);
@@ -1513,8 +1514,21 @@ class LLMS_Generator
             // Get progress ID from transient
             $progress_id = get_transient('llms_current_progress_id');
             if (!$progress_id) {
-                $this->logger->error('No progress ID found, cannot continue');
+                if ($this->logger) {
+                    $this->logger->error('No progress ID found, cannot continue');
+                }
                 return false;
+            }
+            
+            // Check if we can proceed (lock should already be acquired by REST API)
+            if (!LLMS_Generation_Lock::is_locked($progress_id)) {
+                // Try to acquire lock (in case called directly)
+                if (!LLMS_Generation_Lock::acquire($progress_id)) {
+                    if ($this->logger) {
+                        $this->logger->error('Could not acquire generation lock');
+                    }
+                    return false;
+                }
             }
             
             // Update status to running
@@ -1541,11 +1555,13 @@ class LLMS_Generator
                 ['id' => $progress_id]
             );
             
-            $this->logger->info('Starting LLMS files generation', [
-                'progress_id' => $progress_id,
-                'total_posts' => $total_posts,
-                'post_types' => $this->settings['post_types']
-            ]);
+            if ($this->logger) {
+                $this->logger->info('Starting LLMS files generation', [
+                    'progress_id' => $progress_id,
+                    'total_posts' => $total_posts,
+                    'post_types' => $this->settings['post_types']
+                ]);
+            }
             
             // Ensure cache is populated first
             $this->ensure_cache_populated();
@@ -1557,18 +1573,29 @@ class LLMS_Generator
             $this->generate_llms_file('full');
             
             // Complete progress tracking
-            $this->logger->info('LLMS files generation completed successfully');
-            $this->logger->complete_progress('completed');
+            if ($this->logger) {
+                $this->logger->info('LLMS files generation completed successfully');
+                $this->logger->complete_progress('completed');
+            }
             
-            // Clear the progress ID transient
+            // Clear the progress ID transient and release lock
             delete_transient('llms_current_progress_id');
+            LLMS_Generation_Lock::release($progress_id, 'completed');
             
             return true;
             
         } catch (Exception $e) {
-            $this->logger->error('Generation failed: ' . $e->getMessage());
-            $this->logger->complete_progress('error');
+            if ($this->logger) {
+                $this->logger->error('Generation failed: ' . $e->getMessage());
+                $this->logger->complete_progress('error');
+            }
             delete_transient('llms_current_progress_id');
+            
+            // Release lock on error
+            if (isset($progress_id)) {
+                LLMS_Generation_Lock::release($progress_id, 'error');
+            }
+            
             return false;
         }
     }

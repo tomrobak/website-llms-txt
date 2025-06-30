@@ -15,8 +15,6 @@ if (!defined('ABSPATH')) {
 }
 
 class LLMS_Core {
-    private ?LLMS_Generator $generator = null;
-
     public function __construct()
     {
         // Initialize core functionality
@@ -75,7 +73,7 @@ class LLMS_Core {
         // Register post type
         $this->create_post_type();
         // Initialize generator after post type
-        $this->generator = new LLMS_Generator();
+        // Generator is instantiated separately
 
         // Add rewrite rules
         $this->add_rewrite_rule();

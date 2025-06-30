@@ -14,6 +14,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once LLMS_PLUGIN_DIR . 'includes/class-llms-generation-lock.php';
+
 class LLMS_REST_API {
     private static ?self $instance = null;
     
@@ -194,24 +196,23 @@ class LLMS_REST_API {
                     'updated_at' => current_time('mysql')
                 ]
             );
-        } elseif ($progress->status === 'running') {
-            // Check if actually running by checking if updated recently (within 5 minutes)
-            $last_update = strtotime($progress->updated_at);
-            $now = time();
-            
-            if (($now - $last_update) < 300) {
+        }
+        
+        // Try to acquire lock
+        if (!LLMS_Generation_Lock::acquire($progress_id)) {
+            // Check if it's actually locked or just stale
+            if (LLMS_Generation_Lock::is_locked($progress_id)) {
                 return new WP_REST_Response(['error' => 'Generation already running', 'progress_id' => $progress_id], 409);
-            } else {
-                // Stale progress, reset it
-                $wpdb->update(
-                    $wpdb->prefix . 'llms_txt_progress',
-                    ['status' => 'pending'],
-                    ['id' => $progress_id]
-                );
+            }
+            
+            // Stale lock, clean it up and try again
+            LLMS_Generation_Lock::cleanup_stale_locks();
+            if (!LLMS_Generation_Lock::acquire($progress_id)) {
+                return new WP_REST_Response(['error' => 'Could not acquire generation lock', 'progress_id' => $progress_id], 409);
             }
         }
         
-        // Set transient to keep track
+        // Set transient to keep track (but lock is the primary mechanism)
         set_transient('llms_current_progress_id', $progress_id, HOUR_IN_SECONDS);
         
         // Clear any existing scheduled hooks
