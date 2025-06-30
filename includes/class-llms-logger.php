@@ -23,8 +23,7 @@ class LLMS_Logger {
         $this->start_time = microtime(true);
         $this->start_memory = memory_get_usage();
         
-        // Register REST API endpoints
-        add_action('rest_api_init', [$this, 'register_rest_routes']);
+        // REST API routes are now registered in LLMS_REST_API class
     }
     
     /**

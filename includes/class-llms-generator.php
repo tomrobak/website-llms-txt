@@ -32,8 +32,8 @@ class LLMS_Generator
         // Initialize content cleaner
         $this->content_cleaner = new LLMS_Content_Cleaner();
         
-        // Initialize logger
-        $this->logger = new LLMS_Logger();
+        // Get logger instance
+        $this->logger = llms_get_logger();
 
         // Initialize hooks
         add_action('init', array($this, 'init_generator'), 20);
@@ -1012,7 +1012,7 @@ class LLMS_Generator
         $processed_content = do_shortcode($raw_content);
         $content = $this->content_cleaner->clean($this->remove_emojis($this->remove_shortcodes($processed_content)));
 
-        $wpdb->replace(
+        $result = $wpdb->replace(
             $table,
             [
                 'post_id' => $post_id,
@@ -1052,6 +1052,14 @@ class LLMS_Generator
                 '%s'
             ]
         );
+        
+        if ($result === false) {
+            $this->logger->error("Failed to insert/update cache for post {$post_id}. Last DB error: " . $wpdb->last_error);
+        } else {
+            if ($mode === 'populate') {
+                $this->logger->debug("Successfully cached post {$post_id}");
+            }
+        }
 
         if ($this->settings['update_frequency'] === 'immediate' && $update !== 'manual' && $mode !== 'populate') {
             wp_clear_scheduled_hook('llms_update_llms_file_cron');
@@ -1222,14 +1230,38 @@ class LLMS_Generator
         
         $table_cache = $wpdb->prefix . 'llms_txt_cache';
         
+        // First check if table exists
+        $table_exists = $wpdb->get_var($wpdb->prepare(
+            "SHOW TABLES LIKE %s",
+            $table_cache
+        ));
+        
+        if (!$table_exists) {
+            if ($this->logger) {
+                $this->logger->error("Cache table does not exist: {$table_cache}");
+            }
+            $this->llms_create_txt_cache_table_if_not_exists();
+            if ($this->logger) {
+                $this->logger->info("Cache table created");
+            }
+        }
+        
         // Check if cache has any entries
         $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$table_cache}");
         
+        if ($this->logger) {
+            $this->logger->info("Cache count check: {$cache_count} entries found");
+        }
+        
         if ($cache_count == 0) {
-            $this->logger->info('Cache is empty, populating with existing posts');
+            if ($this->logger) {
+                $this->logger->info('Cache is empty, populating with existing posts');
+            }
             $this->populate_entire_cache();
         } else {
-            $this->logger->info("Cache contains {$cache_count} posts");
+            if ($this->logger) {
+                $this->logger->info("Cache contains {$cache_count} posts, skipping population");
+            }
         }
     }
     
@@ -1240,38 +1272,96 @@ class LLMS_Generator
     {
         global $wpdb;
         
+        if ($this->logger) {
+            $this->logger->info("Starting populate_entire_cache");
+            $this->logger->info("Post types to process: " . json_encode($this->settings['post_types']));
+        }
+        
+        // First check if post types are registered
+        $registered_types = get_post_types(['public' => true]);
+        if ($this->logger) {
+            $this->logger->info("Registered public post types: " . json_encode($registered_types));
+        }
+        
         foreach ($this->settings['post_types'] as $post_type) {
             if ($post_type === 'llms_txt') continue;
             
-            $this->logger->info("Populating cache for post type: {$post_type}");
+            if (!post_type_exists($post_type)) {
+                if ($this->logger) {
+                    $this->logger->warning("Post type '{$post_type}' does not exist!");
+                }
+                continue;
+            }
+            
+            if ($this->logger) {
+                $this->logger->info("Populating cache for post type: {$post_type}");
+            }
             
             // Get all published posts of this type
             $args = array(
                 'post_type' => $post_type,
                 'post_status' => 'publish',
                 'posts_per_page' => -1,
-                'fields' => 'ids'
+                'fields' => 'ids',
+                'suppress_filters' => true
             );
             
             $query = new WP_Query($args);
             $total = count($query->posts);
             
-            $this->logger->info("Found {$total} {$post_type} posts to cache");
+            if ($this->logger) {
+                $this->logger->info("WP_Query found {$total} {$post_type} posts to cache");
+                $this->logger->debug("SQL Query: " . $query->request);
+            }
+            
+            if ($total === 0) {
+                // Try direct database query
+                $count = $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'",
+                    $post_type
+                ));
+                if ($this->logger) {
+                    $this->logger->info("Direct DB query found {$count} {$post_type} posts");
+                }
+            }
             
             $processed = 0;
             foreach ($query->posts as $post_id) {
                 $post = get_post($post_id);
                 if ($post) {
-                    $this->handle_post_update($post_id, $post, false, 'populate');
-                    $processed++;
+                    if ($this->logger) {
+                        $this->logger->debug("Processing post ID: {$post_id}, Title: {$post->post_title}");
+                    }
                     
-                    if ($processed % 10 == 0) {
-                        $this->logger->info("Cached {$processed}/{$total} {$post_type} posts");
+                    try {
+                        $this->handle_post_update($post_id, $post, false, 'populate');
+                        $processed++;
+                        
+                        if ($processed % 5 == 0 && $this->logger) {
+                            $this->logger->info("Cached {$processed}/{$total} {$post_type} posts");
+                        }
+                    } catch (Exception $e) {
+                        if ($this->logger) {
+                            $this->logger->error("Error caching post {$post_id}: " . $e->getMessage());
+                        }
+                    }
+                } else {
+                    if ($this->logger) {
+                        $this->logger->warning("Could not get post object for ID: {$post_id}");
                     }
                 }
             }
             
+            if ($this->logger) {
+                $this->logger->info("Completed caching {$processed} {$post_type} posts");
+            }
             wp_reset_postdata();
+        }
+        
+        // Verify cache was populated
+        $cache_count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}llms_txt_cache");
+        if ($this->logger) {
+            $this->logger->info("Total posts in cache after population: {$cache_count}");
         }
     }
     

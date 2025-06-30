@@ -227,6 +227,7 @@ foreach ($notices as $notice) {
             <li><button class="llms-tab-button active" data-tab="content">📝 Content Settings</button></li>
             <li><button class="llms-tab-button" data-tab="management">🛠️ Management</button></li>
             <li><button class="llms-tab-button" data-tab="import-export">📦 Import/Export</button></li>
+            <li><button class="llms-tab-button" data-tab="logs">📋 Logs</button></li>
             <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
             <li><button class="llms-tab-button" data-tab="debug">🐛 Debug</button></li>
             <?php endif; ?>
@@ -584,6 +585,44 @@ foreach ($notices as $notice) {
         </div>
     </div>
 
+    <!-- Logs Tab -->
+    <div id="logs-tab" class="llms-tab-panel">
+        <div class="llms-card">
+            <div class="llms-card-header">
+                <h2 class="llms-card-title">📋 Generation Logs</h2>
+                <p class="llms-card-description">View logs from LLMS.txt file generation process</p>
+            </div>
+            <div class="llms-card-content">
+                <!-- Log Filters -->
+                <div class="llms-form-group">
+                    <label for="log-level-filter">Filter by Level:</label>
+                    <select id="log-level-filter" class="llms-select">
+                        <option value="ALL">All Levels</option>
+                        <option value="INFO">Info</option>
+                        <option value="WARNING">Warning</option>
+                        <option value="ERROR">Error</option>
+                        <option value="DEBUG">Debug</option>
+                    </select>
+                </div>
+
+                <!-- Logs Container -->
+                <div id="logs-container" class="llms-logs-container" style="background: #f4f4f4; border: 1px solid #ddd; border-radius: 4px; padding: 15px; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 13px;">
+                    <p style="color: #666;">Loading logs...</p>
+                </div>
+
+                <!-- Log Actions -->
+                <div class="llms-button-group" style="margin-top: 15px;">
+                    <button type="button" id="refresh-logs" class="llms-button llms-button-secondary">
+                        🔄 Refresh Logs
+                    </button>
+                    <button type="button" id="clear-logs" class="llms-button llms-button-secondary llms-button-danger">
+                        🗑️ Clear Old Logs
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
     <!-- Debug Tab -->
     <div id="debug-tab" class="llms-tab-panel">
@@ -693,6 +732,112 @@ jQuery(document).ready(function($) {
     // Auto-dismiss success notifications after 5 seconds
     $('.llms-alert.success.dismissible').delay(5000).fadeOut(300, function() {
         $(this).remove();
+    });
+
+    // Logs functionality
+    let lastLogId = 0;
+    
+    function loadLogs(append = false) {
+        const level = $('#log-level-filter').val();
+        
+        $.ajax({
+            url: '<?php echo esc_url(rest_url('wp-llms-txt/v1/logs')); ?>',
+            method: 'GET',
+            data: {
+                last_id: append ? lastLogId : 0,
+                level: level,
+                limit: 100
+            },
+            headers: {
+                'X-WP-Nonce': '<?php echo wp_create_nonce('wp_rest'); ?>'
+            },
+            success: function(response) {
+                if (response.logs && response.logs.length > 0) {
+                    let logsHtml = '';
+                    response.logs.forEach(function(log) {
+                        const levelClass = log.level.toLowerCase();
+                        logsHtml += `<div class="log-entry log-${levelClass}" style="margin-bottom: 8px; padding: 8px; border-left: 3px solid ${getLevelColor(log.level)};">`;
+                        logsHtml += `<span style="color: #666;">[${log.timestamp}]</span> `;
+                        logsHtml += `<span style="font-weight: bold; color: ${getLevelColor(log.level)};">${log.level}</span>: `;
+                        logsHtml += `<span>${escapeHtml(log.message)}</span>`;
+                        if (log.context) {
+                            logsHtml += `<pre style="margin-top: 5px; font-size: 11px; color: #666;">${JSON.stringify(log.context, null, 2)}</pre>`;
+                        }
+                        logsHtml += '</div>';
+                        lastLogId = Math.max(lastLogId, log.id);
+                    });
+                    
+                    if (append) {
+                        $('#logs-container').append(logsHtml);
+                    } else {
+                        $('#logs-container').html(logsHtml);
+                    }
+                } else if (!append) {
+                    $('#logs-container').html('<p style="color: #666;">No logs found.</p>');
+                }
+            },
+            error: function(xhr) {
+                $('#logs-container').html('<p style="color: red;">Error loading logs. Make sure to deactivate and reactivate the plugin.</p>');
+                console.error('Error loading logs:', xhr);
+            }
+        });
+    }
+    
+    function getLevelColor(level) {
+        switch(level) {
+            case 'ERROR': return '#dc3545';
+            case 'WARNING': return '#ffc107';
+            case 'INFO': return '#17a2b8';
+            case 'DEBUG': return '#6c757d';
+            default: return '#333';
+        }
+    }
+    
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+    
+    // Load logs when tab is shown
+    $('.llms-tab-button[data-tab="logs"]').on('click', function() {
+        loadLogs();
+    });
+    
+    // Refresh logs button
+    $('#refresh-logs').on('click', function() {
+        loadLogs();
+    });
+    
+    // Filter change
+    $('#log-level-filter').on('change', function() {
+        lastLogId = 0;
+        loadLogs();
+    });
+    
+    // Clear logs button
+    $('#clear-logs').on('click', function() {
+        if (confirm('Are you sure you want to clear old logs? This will delete logs older than 24 hours.')) {
+            $.ajax({
+                url: '<?php echo esc_url(rest_url('wp-llms-txt/v1/logs')); ?>',
+                method: 'DELETE',
+                headers: {
+                    'X-WP-Nonce': '<?php echo wp_create_nonce('wp_rest'); ?>'
+                },
+                success: function(response) {
+                    alert('Old logs cleared successfully.');
+                    loadLogs();
+                },
+                error: function() {
+                    alert('Error clearing logs.');
+                }
+            });
+        }
     });
 });
 </script>

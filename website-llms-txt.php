@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: WP LLMs.txt
- * Description: Manages and automatically generates LLMS.txt files for LLM/AI consumption and integrates with SEO plugins (Yoast SEO, RankMath). Originally created by Website LLM (https://www.websitellm.com) - forked and modified by Tom Robak.
- * Version: 2.1.1
+ * Description: Manages and automatically generates LLMS.txt files for LLM/AI consumption and integrates with SEO plugins (Yoast SEO, RankMath). Originally created by Website LLM - forked and modified by Tom Robak.
+ * Version: 2.1.2
  * Author: Tom Robak
  * Author URI: https://wplove.co
  * Text Domain: wp-llms-txt
@@ -46,7 +46,7 @@ if (version_compare(get_bloginfo('version'), '6.7', '<')) {
 }
 
 // Define plugin constants
-define('LLMS_VERSION', '2.1.1');
+define('LLMS_VERSION', '2.1.2');
 define('LLMS_PLUGIN_FILE', __FILE__);
 define('LLMS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('LLMS_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -56,6 +56,7 @@ require_once LLMS_PLUGIN_DIR . 'includes/class-llms-content-cleaner.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-cache-manager.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-progress.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-logger.php';
+require_once LLMS_PLUGIN_DIR . 'includes/class-llms-rest-api.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-generator.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-core.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-updater.php';
@@ -65,10 +66,15 @@ require_once LLMS_PLUGIN_DIR . 'includes/class-llms-updater.php';
  * Initialize the plugin with modern PHP 8.3+ features
  */
 function llms_init(): void {
+    // Initialize logger first with singleton pattern
+    $GLOBALS['llms_logger'] = new LLMS_Logger();
+    
+    // Initialize REST API handler
+    LLMS_REST_API::init();
+    
     new LLMS_Core();
     new LLMS_Cache_Manager();
     new LLMS_Progress();
-    new LLMS_Logger();
     
     // Initialize auto-updater
     new LLMS_Updater(plugin_file: __FILE__, github_repo: 'tomrobak/website-llms-txt');
@@ -76,6 +82,13 @@ function llms_init(): void {
 
 // Hook the initialization function - priority 0 to ensure early loading
 add_action('init', 'llms_init', 0);
+
+/**
+ * Get the logger instance
+ */
+function llms_get_logger(): ?LLMS_Logger {
+    return $GLOBALS['llms_logger'] ?? null;
+}
 
 /**
  * Activation hook - create database tables

@@ -5,6 +5,31 @@ All notable changes to WP LLMs.txt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2025-06-30
+
+### 🏗️ Architecture Improvements
+
+This patch improves the REST API architecture and fixes logger initialization issues.
+
+### Fixed
+
+- **REST API Registration**: Centralized all REST routes in dedicated handler class
+- **Logger Initialization**: Now uses singleton pattern to prevent duplicate instances
+- **Timing Issues**: REST API routes now register at the correct time
+- **Null Checks**: Added safety checks for logger availability throughout codebase
+
+### Added
+
+- **LLMS_REST_API Class**: New dedicated handler for all REST endpoints
+- **Test Endpoint**: Added `/wp-json/wp-llms-txt/v1/test` for debugging
+- **Global Logger Function**: `llms_get_logger()` for consistent access
+
+### Improved
+
+- **Code Organization**: REST API logic separated from logger class
+- **Error Handling**: Better handling when logger is not yet initialized
+- **Cache Population**: More robust error handling during cache operations
+
 ## [2.1.1] - 2025-06-30
 
 ### 🐛 Critical Bug Fixes
