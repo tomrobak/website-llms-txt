@@ -61,8 +61,8 @@ require_once LLMS_PLUGIN_DIR . 'includes/class-llms-generator.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-core.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-updater.php';
 
-// Debug tool (only in admin)
-if (is_admin()) {
+// Debug tool (only in admin and if file exists)
+if (is_admin() && file_exists(LLMS_PLUGIN_DIR . 'includes/debug-fix.php')) {
     require_once LLMS_PLUGIN_DIR . 'includes/debug-fix.php';
 }
 // Note: class-llms-provider.php is loaded conditionally in LLMS_Core::init_seo_integrations()

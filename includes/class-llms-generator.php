@@ -1690,11 +1690,6 @@ class LLMS_Generator
             \WP_CLI::log('End generate_content event');
         }
 
-        if ( ! is_multisite() ) {
-            if (file_exists($upload_path)) {
-                $this->wp_filesystem->copy($upload_path, $file_path, true);
-            }
-        }
 
         // Update the hidden post
         $core = new LLMS_Core();
