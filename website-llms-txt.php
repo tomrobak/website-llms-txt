@@ -55,6 +55,7 @@ define('LLMS_PLUGIN_URL', plugin_dir_url(__FILE__));
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-content-cleaner.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-cache-manager.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-progress.php';
+require_once LLMS_PLUGIN_DIR . 'includes/class-llms-logger.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-generator.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-core.php';
 require_once LLMS_PLUGIN_DIR . 'includes/class-llms-updater.php';
@@ -67,6 +68,7 @@ function llms_init(): void {
     new LLMS_Core();
     new LLMS_Cache_Manager();
     new LLMS_Progress();
+    new LLMS_Logger();
     
     // Initialize auto-updater
     new LLMS_Updater(plugin_file: __FILE__, github_repo: 'tomrobak/website-llms-txt');
@@ -111,6 +113,42 @@ function llms_activate(): void {
     ) $charset_collate;";
     
     dbDelta($sql);
+    
+    // Create logs table
+    $logs_table = $wpdb->prefix . 'llms_txt_logs';
+    $sql_logs = "CREATE TABLE $logs_table (
+        `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        `timestamp` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        `level` VARCHAR(10) DEFAULT 'INFO',
+        `message` TEXT,
+        `context` TEXT,
+        `post_id` BIGINT UNSIGNED DEFAULT NULL,
+        `memory_usage` BIGINT DEFAULT NULL,
+        `execution_time` FLOAT DEFAULT NULL,
+        KEY idx_timestamp (timestamp),
+        KEY idx_level (level),
+        KEY idx_post_id (post_id)
+    ) $charset_collate;";
+    
+    dbDelta($sql_logs);
+    
+    // Create progress table
+    $progress_table = $wpdb->prefix . 'llms_txt_progress';
+    $sql_progress = "CREATE TABLE $progress_table (
+        `id` VARCHAR(50) NOT NULL PRIMARY KEY,
+        `status` VARCHAR(20) DEFAULT 'running',
+        `current_item` INT DEFAULT 0,
+        `total_items` INT DEFAULT 0,
+        `current_post_id` BIGINT UNSIGNED DEFAULT NULL,
+        `current_post_title` TEXT,
+        `started_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `memory_peak` BIGINT DEFAULT 0,
+        `errors` INT DEFAULT 0,
+        `warnings` INT DEFAULT 0
+    ) $charset_collate;";
+    
+    dbDelta($sql_progress);
     
     // Also ensure rewrite rules are flushed
     flush_rewrite_rules();

@@ -14,6 +14,7 @@ class LLMS_Generator
     private $write_log;
     private $llms_name;
     private $limit = 500;
+    private ?LLMS_Logger $logger = null;
 
     public function __construct()
     {
@@ -30,6 +31,9 @@ class LLMS_Generator
 
         // Initialize content cleaner
         $this->content_cleaner = new LLMS_Content_Cleaner();
+        
+        // Initialize logger
+        $this->logger = new LLMS_Logger();
 
         // Initialize hooks
         add_action('init', array($this, 'init_generator'), 20);
@@ -667,6 +671,15 @@ class LLMS_Generator
                             $exit = true;
                             break;
                         }
+                        
+                        // Log progress
+                        $this->logger->update_progress($i + 1, intval($data->post_id), $data->title);
+                        $this->logger->debug('Processing post', [
+                            'post_id' => $data->post_id,
+                            'title' => $data->title,
+                            'type' => $data->type,
+                            'content_length' => strlen($data->content)
+                        ], intval($data->post_id));
 
                         if ($this->settings['include_meta']) {
                             if ($data->meta) {
@@ -1069,6 +1082,20 @@ class LLMS_Generator
 
     public function update_llms_file()
     {
+        // Get progress ID from transient or generate new one
+        $progress_id = get_transient('llms_current_progress_id');
+        if (!$progress_id) {
+            $progress_id = 'file_generation_' . time();
+        }
+        
+        // Start progress tracking
+        $total_posts = $this->count_total_posts();
+        $this->logger->start_progress($progress_id, $total_posts);
+        $this->logger->info('Starting LLMS.txt file generation', [
+            'total_posts' => $total_posts,
+            'post_types' => $this->settings['post_types']
+        ]);
+        
         if (defined('WP_CLI') && WP_CLI) {
             \WP_CLI::log('Start');
         }
@@ -1076,6 +1103,8 @@ class LLMS_Generator
         $upload_dir = wp_upload_dir();
         if (isset($upload_dir['error']) && $upload_dir['error']) {
             $this->log_error('Failed to get upload directory in update_llms_file: ' . $upload_dir['error']);
+            $this->logger->error('Failed to get upload directory', ['error' => $upload_dir['error']]);
+            $this->logger->complete_progress('error');
             return;
         }
         
@@ -1148,6 +1177,13 @@ class LLMS_Generator
         }
 
         do_action('llms_clear_seo_caches');
+        
+        // Complete progress tracking
+        $this->logger->info('LLMS.txt file generation completed successfully');
+        $this->logger->complete_progress('completed');
+        
+        // Clear the progress ID transient
+        delete_transient('llms_current_progress_id');
     }
 
     public function schedule_updates()
@@ -1168,6 +1204,29 @@ class LLMS_Generator
         
         // Schedule cache population
         wp_schedule_single_event(time() + 5, 'llms_populate_cache');
+    }
+    
+    /**
+     * Count total posts to process
+     */
+    private function count_total_posts(): int
+    {
+        global $wpdb;
+        
+        $total = 0;
+        foreach ($this->settings['post_types'] as $post_type) {
+            if ($post_type === 'llms_txt') continue;
+            
+            $count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->posts} 
+                WHERE post_type = %s AND post_status = 'publish'",
+                $post_type
+            ));
+            
+            $total += intval($count);
+        }
+        
+        return $total;
     }
     
     /**

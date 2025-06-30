@@ -219,6 +219,14 @@ class LLMS_Core {
             array('dashicons'),
             LLMS_VERSION
         );
+        
+        // Enqueue progress tracker styles
+        wp_enqueue_style(
+            'llms-progress-styles',
+            LLMS_PLUGIN_URL . 'admin/css/llms-progress.css',
+            array(),
+            LLMS_VERSION
+        );
 
         // Register and enqueue admin script
         wp_register_script(
@@ -231,19 +239,19 @@ class LLMS_Core {
 
         wp_enqueue_script('llms-admin-script');
         
-        // Enqueue progress script
+        // Enqueue new progress tracker script
         wp_enqueue_script(
-            'llms-progress-script',
-            LLMS_PLUGIN_URL . 'admin/progress.js',
-            array('jquery'),
+            'llms-progress-tracker',
+            LLMS_PLUGIN_URL . 'admin/js/llms-progress.js',
+            array('wp-api-request'),
             LLMS_VERSION,
             true
         );
         
-        // Localize script with AJAX data
-        wp_localize_script('llms-progress-script', 'llmsProgress', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('llms_progress_nonce')
+        // Localize script with REST API data
+        wp_localize_script('llms-progress-tracker', 'wpApiSettings', array(
+            'root' => esc_url_raw(rest_url()),
+            'nonce' => wp_create_nonce('wp_rest')
         ));
         
         // Enqueue validation script
@@ -363,33 +371,22 @@ class LLMS_Core {
 
         check_admin_referer('generate_llms_file', 'generate_llms_file_nonce');
         
-        // Get the generator instance
-        $generator = new LLMS_Generator();
+        // Generate a unique progress ID
+        $progress_id = 'file_generation_' . time();
         
-        try {
-            // Force immediate generation
-            $generator->init_generator(true);
-            
-            // Run the generation process directly
-            do_action('llms_update_llms_file_cron');
-            
-            // Clear SEO caches
-            do_action('llms_clear_seo_caches');
-            
-            // Success redirect
-            wp_safe_redirect(add_query_arg(array(
-                'page' => 'llms-file-manager',
-                'file_generated' => 'true',
-                '_wpnonce' => wp_create_nonce('llms_file_generated')
-            ), admin_url('admin.php')));
-        } catch (Exception $e) {
-            // Error redirect
-            wp_safe_redirect(add_query_arg(array(
-                'page' => 'llms-file-manager',
-                'error' => 'generation_failed',
-                '_wpnonce' => wp_create_nonce('llms_generation_error')
-            ), admin_url('admin.php')));
-        }
+        // Store progress ID in transient for 1 hour
+        set_transient('llms_current_progress_id', $progress_id, HOUR_IN_SECONDS);
+        
+        // Schedule the generation to run in background
+        wp_schedule_single_event(time() + 2, 'llms_update_llms_file_cron');
+        
+        // Redirect with progress ID
+        wp_safe_redirect(add_query_arg(array(
+            'page' => 'llms-file-manager',
+            'progress' => $progress_id,
+            'tab' => 'management',
+            '_wpnonce' => wp_create_nonce('llms_progress_' . $progress_id)
+        ), admin_url('admin.php')));
         exit;
     }
 

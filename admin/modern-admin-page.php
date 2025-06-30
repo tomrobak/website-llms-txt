@@ -451,6 +451,56 @@ foreach ($notices as $notice) {
                 ?>
             </div>
         </div>
+        
+        <!-- Progress Tracker Section -->
+        <?php
+        $progress_id = isset($_GET['progress']) ? sanitize_text_field($_GET['progress']) : '';
+        $show_progress = !empty($progress_id) && isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'llms_progress_' . $progress_id);
+        ?>
+        <div class="llms-progress-section" <?php echo $show_progress ? 'data-progress-id="' . esc_attr($progress_id) . '"' : 'style="display: none;"'; ?>>
+            <div class="llms-card">
+                <div class="llms-card-header">
+                    <h2 class="llms-card-title">📊 Generation Progress</h2>
+                    <p class="llms-card-description">Real-time progress tracking</p>
+                </div>
+                <div class="llms-card-content">
+                    <div class="llms-progress-container">
+                        <div class="llms-progress-wrapper">
+                            <div class="llms-progress-bar-container">
+                                <div class="llms-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+                            </div>
+                            <div class="llms-progress-text">0% (0/0)</div>
+                        </div>
+                        
+                        <div class="llms-progress-details"></div>
+                        
+                        <div class="llms-progress-controls">
+                            <button type="button" class="llms-cancel-btn">❌ Cancel</button>
+                            <button type="button" class="llms-clear-logs-btn">🗑️ Clear Old Logs</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Log Viewer -->
+                    <div class="llms-log-viewer">
+                        <div class="llms-log-header">
+                            <h3 class="llms-log-title">📝 Activity Log</h3>
+                            <div class="llms-log-controls">
+                                <select class="llms-log-filter">
+                                    <option value="">All Levels</option>
+                                    <option value="INFO">Info</option>
+                                    <option value="WARNING">Warnings</option>
+                                    <option value="ERROR">Errors</option>
+                                    <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                                    <option value="DEBUG">Debug</option>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="llms-log-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <?php
         // Display error logs if any exist
